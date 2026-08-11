@@ -1,24 +1,25 @@
-// Image URL helper - points to backend server
+// Image URL helper
+const BACKEND_URL = import.meta.env.VITE_API_URL;
+
 export const getImageUrl = (imagePath) => {
   if (!imagePath) {
-    return '/api/placeholder/300/300';
+    return '/placeholder.jpg';
   }
-  
-  // If it's already a full URL with http
+
+  // Already a complete URL
   if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) {
     return imagePath;
   }
-  
-  // If it's a relative path starting with /uploads/
+
+  // Image path from the backend
   if (imagePath.startsWith('/uploads/')) {
-    // Use the backend URL (port 5000), not the frontend (port 5173)
-    return `http://localhost:5000${imagePath}`;
+    return `${BACKEND_URL}${imagePath}`;
   }
-  
-  // If it's just a filename
+
+  // Just a filename
   if (!imagePath.startsWith('/')) {
-    return `http://localhost:5000/uploads/products/${imagePath}`;
+    return `${BACKEND_URL}/uploads/products/${imagePath}`;
   }
-  
-  return '/api/placeholder/300/300';
+
+  return '/placeholder.jpg';
 };
