@@ -7,9 +7,14 @@ const pool = new Pool({
   user: process.env.DB_USER,
   password: process.env.DB_PASSWORD,
   database: process.env.DB_NAME,
+
+  ssl: {
+    rejectUnauthorized: false
+  },
+
   max: 20,
   idleTimeoutMillis: 30000,
-  connectionTimeoutMillis: 2000,
+  connectionTimeoutMillis: 20000,
 });
 
 // Test connection
@@ -18,7 +23,8 @@ pool.connect((err, client, release) => {
     console.error('Database connection error:', err.message);
     return;
   }
-  console.log('Connected to PostgreSQL database');
+
+  console.log('Connected to Neon PostgreSQL database');
   release();
 });
 
