@@ -8,7 +8,7 @@ import {
 } from 'react-icons/fa';
 import AdminLayout from '../../components/admin/AdminLayout';
 import { getImageUrl } from '../../utils/imageHelper';
-import api from '../api';
+import api from '../../api';
 
 const AdminCategories = () => {
   const [categories, setCategories] = useState([]);
