@@ -8,7 +8,7 @@ import {
   FaDollarSign, FaTag, FaBox
 } from 'react-icons/fa';
 import AdminLayout from '../../components/admin/AdminLayout';
-import api from '../api';
+import api from '.../../api';
 
 const AdminFlashSale = () => {
   const [flashSales, setFlashSales] = useState([]);
