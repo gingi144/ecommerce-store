@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { FaPlus, FaEdit, FaTrash, FaEye, FaToggleOn, FaToggleOff, FaSearch } from 'react-icons/fa';
 import AdminLayout from '../../components/admin/AdminLayout';
 import { getImageUrl } from '../../utils/imageHelper';
-import api from '../api';
+import api from '../../api';
 
 const AdminProducts = () => {
   const [products, setProducts] = useState([]);
