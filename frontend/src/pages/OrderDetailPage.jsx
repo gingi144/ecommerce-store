@@ -10,7 +10,7 @@ import {
 } from 'react-icons/fa';
 import Navbar from '../components/shared/Navbar';
 import Footer from '../components/shared/Footer';
-import axios from 'axios';
+import api from '../api';
 
 const OrderDetailPage = () => {
   const { id } = useParams();
@@ -51,10 +51,10 @@ const OrderDetailPage = () => {
         return;
       }
 
-      const url = `http://localhost:5000/api/orders/${orderId}`;
+      const url = `/api/orders/${orderId}`;
       console.log('Fetching from URL:', url);
       
-      const response = await axios.get(url, {
+      const response = await api.get(url, {
         headers: { 
           'Authorization': 'Bearer ' + token,
           'Content-Type': 'application/json'

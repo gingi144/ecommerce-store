@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { FaShoppingBag, FaEye, FaCheckCircle, FaClock, FaTruck, FaTimesCircle, FaArrowRight } from 'react-icons/fa';
 import Navbar from '../components/shared/Navbar';
 import Footer from '../components/shared/Footer';
-import axios from 'axios';
+import api from '../api';
 
 const OrdersPage = () => {
   const [orders, setOrders] = useState([]);
@@ -23,7 +23,7 @@ const OrdersPage = () => {
         return;
       }
 
-      const response = await axios.get('http://localhost:5000/api/orders/my-orders', {
+      const response = await api.get('/api/orders/my-orders', {
         headers: { Authorization: 'Bearer ' + token }
       });
 

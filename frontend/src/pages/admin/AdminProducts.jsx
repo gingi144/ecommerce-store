@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { FaPlus, FaEdit, FaTrash, FaEye, FaToggleOn, FaToggleOff, FaSearch } from 'react-icons/fa';
 import AdminLayout from '../../components/admin/AdminLayout';
 import { getImageUrl } from '../../utils/imageHelper';
-import axios from 'axios';
+import api from '../api';
 
 const AdminProducts = () => {
   const [products, setProducts] = useState([]);
@@ -17,7 +17,7 @@ const AdminProducts = () => {
   const fetchProducts = async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await axios.get('http://localhost:5000/api/admin/products', {
+      const response = await api.get('/api/admin/products', {
         headers: { Authorization: `Bearer ${token}` }
       });
       setProducts(Array.isArray(response.data) ? response.data : []);
@@ -34,7 +34,7 @@ const AdminProducts = () => {
     
     try {
       const token = localStorage.getItem('token');
-      await axios.delete(`http://localhost:5000/api/admin/products/${productId}`, {
+      await api.delete(`/api/admin/products/${productId}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       fetchProducts();
@@ -46,7 +46,7 @@ const AdminProducts = () => {
   const toggleProductStatus = async (productId, currentStatus) => {
     try {
       const token = localStorage.getItem('token');
-      await axios.put(`http://localhost:5000/api/admin/products/${productId}`,
+      await api.put(`/api/admin/products/${productId}`,
         { is_active: !currentStatus },
         { headers: { Authorization: `Bearer ${token}` } }
       );

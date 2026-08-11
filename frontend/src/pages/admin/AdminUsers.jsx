@@ -9,7 +9,7 @@ import {
 } from 'react-icons/fa';
 import { useAuth } from '../../context/AuthContext';
 import AdminLayout from '../../components/admin/AdminLayout';
-import axios from 'axios';
+import api from '../api';
 
 const AdminUsers = () => {
   const { isAdmin, loading: authLoading } = useAuth();
@@ -41,7 +41,7 @@ const AdminUsers = () => {
   const fetchUsers = async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await axios.get('http://localhost:5000/api/admin/users', {
+      const response = await api.get('/api/admin/users', {
         headers: { Authorization: 'Bearer ' + token }
       });
       
@@ -73,7 +73,7 @@ const AdminUsers = () => {
   const toggleUserRole = async (userId, currentRole) => {
     try {
       const token = localStorage.getItem('token');
-      await axios.put(`http://localhost:5000/api/admin/users/${userId}/role`, 
+      await api.put(`/api/admin/users/${userId}/role`, 
         { is_admin: !currentRole },
         { headers: { Authorization: 'Bearer ' + token } }
       );
@@ -89,7 +89,7 @@ const AdminUsers = () => {
     
     try {
       const token = localStorage.getItem('token');
-      await axios.delete(`http://localhost:5000/api/admin/users/${userId}`, {
+      await api.delete(`/api/admin/users/${userId}`, {
         headers: { Authorization: 'Bearer ' + token }
       });
       setShowDeleteModal(false);

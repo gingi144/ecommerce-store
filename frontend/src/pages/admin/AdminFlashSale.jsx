@@ -8,7 +8,7 @@ import {
   FaDollarSign, FaTag, FaBox
 } from 'react-icons/fa';
 import AdminLayout from '../../components/admin/AdminLayout';
-import axios from 'axios';
+import api from '../api';
 
 const AdminFlashSale = () => {
   const [flashSales, setFlashSales] = useState([]);
@@ -34,7 +34,7 @@ const AdminFlashSale = () => {
   const fetchFlashSales = async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await axios.get('http://localhost:5000/api/admin/flash-sales', {
+      const response = await api.get('/api/admin/flash-sales', {
         headers: { Authorization: `Bearer ${token}` }
       });
       
@@ -74,7 +74,7 @@ const AdminFlashSale = () => {
   const toggleFlashSaleStatus = async (saleId, currentStatus) => {
     try {
       const token = localStorage.getItem('token');
-      await axios.put(`http://localhost:5000/api/admin/flash-sales/${saleId}/status`,
+      await api.put(`/api/admin/flash-sales/${saleId}/status`,
         { is_active: !currentStatus },
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -90,7 +90,7 @@ const AdminFlashSale = () => {
     
     try {
       const token = localStorage.getItem('token');
-      await axios.delete(`http://localhost:5000/api/admin/flash-sales/${saleId}`, {
+      await api.delete(`/api/admin/flash-sales/${saleId}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setShowDeleteModal(false);

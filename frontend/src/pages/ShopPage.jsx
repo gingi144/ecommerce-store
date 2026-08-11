@@ -6,7 +6,7 @@ import Navbar from '../components/shared/Navbar';
 import Footer from '../components/shared/Footer';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
-import axios from 'axios';
+import api from '../api';
 
 const ShopPage = () => {
   const [searchParams] = useSearchParams();
@@ -36,7 +36,7 @@ const ShopPage = () => {
 
   const fetchCategories = async () => {
     try {
-      const response = await axios.get('http://localhost:5000/api/categories');
+      const response = await api.get('/api/categories');
       setCategories(response.data || []);
     } catch (error) {
       console.error('Error fetching categories:', error);
@@ -53,7 +53,7 @@ const ShopPage = () => {
       if (filters.minPrice) params.append('minPrice', filters.minPrice);
       if (filters.maxPrice) params.append('maxPrice', filters.maxPrice);
       
-      const response = await axios.get(`http://localhost:5000/api/products?${params}`);
+      const response = await api.get(`/api/products?${params}`);
       setProducts(response.data.products || []);
     } catch (error) {
       console.error('Error fetching products:', error);
@@ -65,7 +65,7 @@ const ShopPage = () => {
   const fetchWishlist = async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await axios.get('http://localhost:5000/api/wishlist', {
+      const response = await api.get('/api/wishlist', {
         headers: { Authorization: `Bearer ${token}` }
       });
       setWishlist(response.data.map(item => item.product_id));
@@ -83,12 +83,12 @@ const ShopPage = () => {
     try {
       const token = localStorage.getItem('token');
       if (wishlist.includes(productId)) {
-        await axios.delete(`http://localhost:5000/api/wishlist/${productId}`, {
+        await api.delete(`/api/wishlist/${productId}`, {
           headers: { Authorization: `Bearer ${token}` }
         });
         setWishlist(wishlist.filter(id => id !== productId));
       } else {
-        await axios.post('http://localhost:5000/api/wishlist', 
+        await api.post('/api/wishlist', 
           { product_id: productId },
           { headers: { Authorization: `Bearer ${token}` } }
         );

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { FaEye, FaCheck, FaTimes, FaTruck, FaFilter, FaArrowLeft, FaPrint } from 'react-icons/fa';
 import AdminLayout from '../../components/admin/AdminLayout';
-import axios from 'axios';
+import api from '../api';
 
 const AdminOrders = () => {
   const [orders, setOrders] = useState([]);
@@ -18,7 +18,7 @@ const AdminOrders = () => {
   const fetchOrders = async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await axios.get('http://localhost:5000/api/admin/orders', {
+      const response = await api.get('/api/admin/orders', {
         headers: { Authorization: `Bearer ${token}` }
       });
       setOrders(Array.isArray(response.data) ? response.data : []);
@@ -33,7 +33,7 @@ const AdminOrders = () => {
   const updateOrderStatus = async (orderId, status) => {
     try {
       const token = localStorage.getItem('token');
-      await axios.put(`http://localhost:5000/api/admin/orders/${orderId}/status`, 
+      await api.put(`/api/admin/orders/${orderId}/status`, 
         { status },
         { headers: { Authorization: `Bearer ${token}` } }
       );

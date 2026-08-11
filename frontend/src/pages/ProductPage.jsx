@@ -5,7 +5,7 @@ import { getImageUrl } from '../utils/imageHelper';
 import { useCart } from '../context/CartContext';
 import Navbar from '../components/shared/Navbar';
 import Footer from '../components/shared/Footer';
-import axios from 'axios';
+import api from '../api';
 
 const ProductPage = () => {
   const { slug } = useParams();
@@ -27,7 +27,7 @@ const ProductPage = () => {
 
   const fetchProduct = async () => {
     try {
-      const response = await axios.get(`http://localhost:5000/api/products/${slug}`);
+      const response = await api.get(`/api/products/${slug}`);
       setProduct(response.data);
       const firstImage = response.data.images?.[0]?.image_url || '/api/placeholder/600/600';
       setMainImage(firstImage);

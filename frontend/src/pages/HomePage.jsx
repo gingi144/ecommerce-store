@@ -20,7 +20,7 @@ import { getImageUrl } from '../utils/imageHelper';
 import { useCart } from '../context/CartContext';
 import Navbar from '../components/shared/Navbar';
 import Footer from '../components/shared/Footer';
-import axios from 'axios';
+import api from '../api';
 
 // Import local banner images
 import banner1 from '/images/banners/banner1.jpg';
@@ -134,7 +134,7 @@ const HomePage = () => {
 
   const fetchProducts = async () => {
     try {
-      const response = await axios.get('http://localhost:5000/api/products');
+      const response = await api.get('/api/products');
       const allProducts = response.data.products || [];
       
       setProducts(allProducts);
@@ -158,7 +158,7 @@ const HomePage = () => {
 
   const fetchFlashSaleSettings = async () => {
     try {
-      const response = await axios.get('http://localhost:5000/api/flash-sale/settings');
+      const response = await api.get('/api/flash-sale/settings');
       const settings = response.data;
       
       if (settings && settings.end_time) {

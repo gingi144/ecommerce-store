@@ -8,7 +8,7 @@ import {
 } from 'react-icons/fa';
 import AdminLayout from '../../components/admin/AdminLayout';
 import { getImageUrl } from '../../utils/imageHelper';
-import axios from 'axios';
+import api from '../api';
 
 const AdminCategories = () => {
   const [categories, setCategories] = useState([]);
@@ -33,7 +33,7 @@ const AdminCategories = () => {
   const fetchCategories = async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await axios.get('http://localhost:5000/api/admin/categories', {
+      const response = await api.get('/api/admin/categories', {
         headers: { Authorization: `Bearer ${token}` }
       });
       
@@ -62,7 +62,7 @@ const AdminCategories = () => {
   const toggleCategoryStatus = async (categoryId, currentStatus) => {
     try {
       const token = localStorage.getItem('token');
-      await axios.put(`http://localhost:5000/api/admin/categories/${categoryId}/status`,
+      await api.put(`/api/admin/categories/${categoryId}/status`,
         { is_active: !currentStatus },
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -78,7 +78,7 @@ const AdminCategories = () => {
     
     try {
       const token = localStorage.getItem('token');
-      await axios.delete(`http://localhost:5000/api/admin/categories/${categoryId}`, {
+      await api.delete(`/api/admin/categories/${categoryId}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setShowDeleteModal(false);

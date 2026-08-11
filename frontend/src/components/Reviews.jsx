@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { FaStar, FaStarHalfAlt, FaUser } from 'react-icons/fa';
-import axios from 'axios';
+import api from '../api';
 
 const Reviews = ({ productId }) => {
   const [reviews, setReviews] = useState([]);
@@ -19,7 +19,7 @@ const Reviews = ({ productId }) => {
 
   const fetchReviews = async () => {
     try {
-      const response = await axios.get(`http://localhost:5000/api/reviews/product/${productId}`);
+      const response = await api.get(`/api/reviews/product/${productId}`);
       setReviews(response.data.reviews);
       setAverage(response.data.average || 0);
       setCount(response.data.count || 0);
@@ -46,13 +46,14 @@ const Reviews = ({ productId }) => {
       return;
     }
 
-    try {
-      const token = localStorage.getItem('token');
-      const response = await axios.post(
-        `http://localhost:5000/api/reviews/product/${productId}`,
-        userReview,
-        { headers: { Authorization: 'Bearer ' + token } }
-      );
+   try {
+  const token = localStorage.getItem('token');
+
+  const response = await api.post(
+    `/api/reviews/product/${productId}`,
+    userReview,
+    { headers: { Authorization: 'Bearer ' + token } }
+  );
       
       setSuccess('Review submitted successfully!');
       setUserReview({ rating: 0, title: '', comment: '' });

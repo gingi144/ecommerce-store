@@ -6,7 +6,7 @@ import { useAuth } from '../context/AuthContext';
 import SuccessModal from '../components/shared/SuccessModal';
 import Navbar from '../components/shared/Navbar';
 import Footer from '../components/shared/Footer';
-import axios from 'axios';
+import api from '../api';
 
 // M-PESA Logo
 const MpesaLogo = () => (
@@ -100,14 +100,14 @@ const CheckoutPage = () => {
       };
 
       // Create order
-      const orderResponse = await axios.post('http://localhost:5000/api/orders', orderData, {
+      const orderResponse = await api.post('/api/orders', orderData, {
         headers: { Authorization: 'Bearer ' + token }
       });
 
       const orderId = orderResponse.data.id;
 
       // Initiate PayHero payment
-      const paymentResponse = await axios.post('http://localhost:5000/api/payments/payhero/initiate', {
+      const paymentResponse = await api.post('/api/payments/payhero/initiate', {
         orderId: orderId,
         amount: finalTotal,
         phoneNumber: mpesaPhone,

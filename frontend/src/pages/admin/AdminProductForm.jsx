@@ -3,7 +3,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import { FaSave, FaTimes, FaImage, FaTrash, FaPlus } from 'react-icons/fa';
 import { getImageUrl } from '../../utils/imageHelper';
 import AdminLayout from '../../components/admin/AdminLayout';
-import axios from 'axios';
+import api from '../api';
 
 const AdminProductForm = () => {
   const { id } = useParams();
@@ -51,7 +51,7 @@ const AdminProductForm = () => {
   const fetchCategories = async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await axios.get('http://localhost:5000/api/categories', {
+      const response = await api.get('/api/categories', {
         headers: { Authorization: `Bearer ${token}` }
       });
       setCategories(Array.isArray(response.data) ? response.data : []);
@@ -63,7 +63,7 @@ const AdminProductForm = () => {
   const fetchProduct = async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await axios.get(`http://localhost:5000/api/admin/products/${id}`, {
+      const response = await api.get(`/api/admin/products/${id}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       const product = response.data;
@@ -129,7 +129,7 @@ const AdminProductForm = () => {
       const formData = new FormData();
       files.forEach(file => formData.append('images', file));
 
-      const response = await axios.post('http://localhost:5000/api/admin/upload', formData, {
+      const response = await api.post('/api/admin/upload', formData, {
         headers: {
           Authorization: `Bearer ${token}`,
           'Content-Type': 'multipart/form-data'
@@ -184,15 +184,15 @@ const AdminProductForm = () => {
           discount_percentage: formData.sale_percentage ? parseInt(formData.sale_percentage) : null
         }
       };
+const url = isEditing
+  ? `/api/admin/products/${id}`
+  : '/api/admin/products';
 
-      const url = isEditing 
-        ? `http://localhost:5000/api/admin/products/${id}`
-        : 'http://localhost:5000/api/admin/products';
-      const method = isEditing ? 'put' : 'post';
+const method = isEditing ? 'put' : 'post';
 
-      await axios[method](url, data, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+await api[method](url, data, {
+  headers: { Authorization: `Bearer ${token}` }
+});
 
       setSuccess(isEditing ? 'Product updated successfully!' : 'Product created successfully!');
       setTimeout(() => {

@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { FaPhone, FaEnvelope, FaMapMarkerAlt } from 'react-icons/fa';
 import Navbar from '../components/shared/Navbar';
 import Footer from '../components/shared/Footer';
-import axios from 'axios';
+import api from '../api';
 
 const ContactPage = () => {
   const [formData, setFormData] = useState({
@@ -26,7 +26,7 @@ const ContactPage = () => {
     setLoading(true);
 
     try {
-      await axios.post('http://localhost:5000/api/contact', formData);
+      await api.post('/api/contact', formData);
       setSuccess(true);
       setFormData({ name: '', email: '', phone: '', message: '' });
       setTimeout(() => setSuccess(false), 5000);

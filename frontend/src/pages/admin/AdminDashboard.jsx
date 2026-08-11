@@ -8,7 +8,7 @@ import {
 import { useAuth } from '../../context/AuthContext';
 import { getImageUrl } from '../../utils/imageHelper';
 import AdminLayout from '../../components/admin/AdminLayout';
-import axios from 'axios';
+import api from '../api';
 
 // Chart.js imports
 import {
@@ -71,7 +71,7 @@ const AdminDashboard = () => {
       const token = localStorage.getItem('token');
       
       // Fetch stats
-      const response = await axios.get('http://localhost:5000/api/admin/dashboard/stats', {
+      const response = await api.get('/api/admin/dashboard/stats', {
         headers: { Authorization: 'Bearer ' + token }
       });
       setStats({
@@ -84,13 +84,13 @@ const AdminDashboard = () => {
       });
       
       // Fetch products
-      const productsRes = await axios.get('http://localhost:5000/api/admin/products', {
+      const productsRes = await api.get('/api/admin/products', {
         headers: { Authorization: 'Bearer ' + token }
       });
       setProducts(Array.isArray(productsRes.data) ? productsRes.data : []);
       
       // Fetch orders for chart data
-      const ordersRes = await axios.get('http://localhost:5000/api/admin/orders', {
+      const ordersRes = await api.get('/api/admin/orders', {
         headers: { Authorization: 'Bearer ' + token }
       });
       const orders = Array.isArray(ordersRes.data) ? ordersRes.data : [];

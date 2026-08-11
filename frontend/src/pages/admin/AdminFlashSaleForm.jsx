@@ -6,7 +6,7 @@ import {
   FaBox, FaInfoCircle, FaCheck
 } from 'react-icons/fa';
 import AdminLayout from '../../components/admin/AdminLayout';
-import axios from 'axios';
+import api from '../api';
 
 const AdminFlashSaleForm = () => {
   const navigate = useNavigate();
@@ -43,7 +43,7 @@ const AdminFlashSaleForm = () => {
   const fetchProducts = async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await axios.get('http://localhost:5000/api/admin/products', {
+      const response = await api.get('/api/admin/products', {
         headers: { Authorization: `Bearer ${token}` }
       });
       setAvailableProducts(Array.isArray(response.data) ? response.data : []);
@@ -57,7 +57,7 @@ const AdminFlashSaleForm = () => {
     try {
       setLoading(true);
       const token = localStorage.getItem('token');
-      const response = await axios.get(`http://localhost:5000/api/admin/flash-sales/${id}`, {
+      const response = await api.get(`/api/admin/flash-sales/${id}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       

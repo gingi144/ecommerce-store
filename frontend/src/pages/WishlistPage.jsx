@@ -5,7 +5,7 @@ import { getImageUrl } from '../utils/imageHelper';
 import { useCart } from '../context/CartContext';
 import Navbar from '../components/shared/Navbar';
 import Footer from '../components/shared/Footer';
-import axios from 'axios';
+import api from '../api';
 
 const WishlistPage = () => {
   const [wishlistItems, setWishlistItems] = useState([]);
@@ -19,7 +19,7 @@ const WishlistPage = () => {
   const fetchWishlist = async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await axios.get('http://localhost:5000/api/wishlist', {
+      const response = await api.get('/api/wishlist', {
         headers: { Authorization: `Bearer ${token}` }
       });
       setWishlistItems(response.data || []);
@@ -33,7 +33,7 @@ const WishlistPage = () => {
   const removeFromWishlist = async (productId) => {
     try {
       const token = localStorage.getItem('token');
-      await axios.delete(`http://localhost:5000/api/wishlist/${productId}`, {
+      await api.delete(`/api/wishlist/${productId}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setWishlistItems(prev => prev.filter(item => item.id !== productId));
