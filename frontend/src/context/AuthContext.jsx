@@ -1,6 +1,5 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
-import axios from 'axios';
-
+import api from '../api';
 const AuthContext = createContext();
 
 export const useAuth = () => {
@@ -26,7 +25,7 @@ export const AuthProvider = ({ children }) => {
 
   const fetchUser = async () => {
     try {
-      const response = await axios.get('http://localhost:5000/api/auth/me', {
+      const response = await api.get('/api/auth/me', {
         headers: { Authorization: `Bearer ${token}` }
       });
       const userData = response.data;
@@ -46,7 +45,7 @@ export const AuthProvider = ({ children }) => {
 
   const login = async (email, password) => {
     try {
-      const response = await axios.post('http://localhost:5000/api/auth/login', {
+      const response = await api.post('/api/auth/login', {
         email,
         password
       });
@@ -70,7 +69,7 @@ export const AuthProvider = ({ children }) => {
 
   const signup = async (userData) => {
     try {
-      const response = await axios.post('http://localhost:5000/api/auth/signup', userData);
+      const response = await api.post('/api/auth/signup', userData);
       
       const { token, user } = response.data;
       const isAdmin = user.is_admin === true;
