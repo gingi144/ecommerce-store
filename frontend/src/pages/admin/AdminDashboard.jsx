@@ -8,7 +8,7 @@ import {
 import { useAuth } from '../../context/AuthContext';
 import { getImageUrl } from '../../utils/imageHelper';
 import AdminLayout from '../../components/admin/AdminLayout';
-import api from '../api';
+import api from '../../api';
 
 // Chart.js imports
 import {
