@@ -3,7 +3,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import { FaSave, FaTimes, FaImage, FaTrash, FaPlus } from 'react-icons/fa';
 import { getImageUrl } from '../../utils/imageHelper';
 import AdminLayout from '../../components/admin/AdminLayout';
-import api from '../api';
+import api from '../../api';
 
 const AdminProductForm = () => {
   const { id } = useParams();
