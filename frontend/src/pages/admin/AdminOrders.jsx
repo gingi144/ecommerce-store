@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { FaEye, FaCheck, FaTimes, FaTruck, FaFilter, FaArrowLeft, FaPrint } from 'react-icons/fa';
 import AdminLayout from '../../components/admin/AdminLayout';
-import api from '../api';
+import api from '../../api';
 
 const AdminOrders = () => {
   const [orders, setOrders] = useState([]);
