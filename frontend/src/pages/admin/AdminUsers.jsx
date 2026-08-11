@@ -9,7 +9,7 @@ import {
 } from 'react-icons/fa';
 import { useAuth } from '../../context/AuthContext';
 import AdminLayout from '../../components/admin/AdminLayout';
-import api from '../api';
+import api from '../../api';
 
 const AdminUsers = () => {
   const { isAdmin, loading: authLoading } = useAuth();
