@@ -6,7 +6,7 @@ import {
   FaBox, FaInfoCircle, FaCheck
 } from 'react-icons/fa';
 import AdminLayout from '../../components/admin/AdminLayout';
-import api from '../api';
+import api from '../../api';
 
 const AdminFlashSaleForm = () => {
   const navigate = useNavigate();
