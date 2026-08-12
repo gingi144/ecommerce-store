@@ -44,7 +44,9 @@ const getAuthHeader = () => {
 
   if (basicAuth) {
     return {
-      Authorization: `Basic ${basicAuth}`
+      Authorization: basicAuth.startsWith('Basic ')
+        ? basicAuth
+        : `Basic ${basicAuth}`
     };
   }
 
