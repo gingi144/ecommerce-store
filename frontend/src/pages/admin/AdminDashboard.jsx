@@ -338,9 +338,9 @@ const AdminDashboard = () => {
   if (authLoading) {
     return (
       <AdminLayout>
-        <div style={styles.loadingContainer}>
-          <div style={styles.spinner}></div>
-          <p style={styles.loadingText}>Loading...</p>
+        <div className="admin-loading-container">
+          <div className="admin-spinner"></div>
+          <p className="admin-loading-text">Loading...</p>
         </div>
       </AdminLayout>
     );
@@ -352,472 +352,702 @@ const AdminDashboard = () => {
 
   const productList = Array.isArray(products) ? products : [];
 
-  const styles = {
-    container: {
-      maxWidth: '1280px',
-      margin: '0 auto',
-    },
-    pageTitle: {
-      fontSize: '1.75rem',
-      fontWeight: '700',
-      color: '#000000',
-      marginBottom: '2rem',
-    },
-    loadingContainer: {
-      display: 'flex',
-      flexDirection: 'column',
-      alignItems: 'center',
-      justifyContent: 'center',
-      minHeight: '60vh',
-    },
-    spinner: {
-      width: '40px',
-      height: '40px',
-      border: '4px solid #E5E5E5',
-      borderTop: '4px solid #DB4444',
-      borderRadius: '50%',
-      animation: 'spin 1s linear infinite',
-    },
-    loadingText: {
-      marginTop: '1rem',
-      color: '#666666',
-    },
-    statsGrid: {
-      display: 'grid',
-      gridTemplateColumns: 'repeat(4, 1fr)',
-      gap: '1.5rem',
-      marginBottom: '2rem',
-    },
-    statCard: {
-      backgroundColor: '#FFFFFF',
-      padding: '1.5rem',
-      borderRadius: '8px',
-      boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
-      display: 'flex',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-    },
-    statContent: {
-      display: 'flex',
-      flexDirection: 'column',
-      gap: '0.25rem',
-    },
-    statLabel: {
-      fontSize: '0.875rem',
-      color: '#666666',
-      margin: 0,
-    },
-    statNumber: {
-      fontSize: '1.75rem',
-      fontWeight: '700',
-      color: '#000000',
-      margin: 0,
-    },
-    statIcon: {
-      fontSize: '2.5rem',
-      color: '#DB4444',
-      opacity: 0.7,
-    },
-    chartsGrid: {
-      display: 'grid',
-      gridTemplateColumns: '1fr 1fr',
-      gap: '1.5rem',
-      marginBottom: '2rem',
-    },
-    chartCard: {
-      backgroundColor: '#FFFFFF',
-      padding: '1.5rem',
-      borderRadius: '8px',
-      boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
-    },
-    chartWrapper: {
-      height: '300px',
-      position: 'relative',
-    },
-    chartWrapperSmall: {
-      height: '280px',
-      position: 'relative',
-      maxWidth: '320px',
-      margin: '0 auto',
-    },
-    chartHeader: {
-      display: 'flex',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-      marginBottom: '1rem',
-    },
-    chartTitle: {
-      fontSize: '1rem',
-      fontWeight: '600',
-      color: '#000000',
-      margin: 0,
-    },
-    quickStatsCard: {
-      backgroundColor: '#FFFFFF',
-      padding: '1.5rem',
-      borderRadius: '8px',
-      boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
-      display: 'flex',
-      flexDirection: 'column',
-    },
-    quickStatsGrid: {
-      display: 'grid',
-      gridTemplateColumns: '1fr 1fr',
-      gap: '1rem',
-      flex: 1,
-      alignItems: 'center',
-    },
-    quickStat: {
-      backgroundColor: '#F8F8F8',
-      padding: '1rem',
-      borderRadius: '8px',
-      textAlign: 'center',
-    },
-    quickStatLabel: {
-      display: 'block',
-      fontSize: '0.75rem',
-      color: '#999999',
-      marginBottom: '0.25rem',
-    },
-    quickStatValue: {
-      display: 'block',
-      fontSize: '1.25rem',
-      fontWeight: '700',
-      color: '#000000',
-    },
-    tableCard: {
-      backgroundColor: '#FFFFFF',
-      borderRadius: '8px',
-      boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
-      overflow: 'hidden',
-    },
-    tableHeader: {
-      padding: '1.5rem',
-      borderBottom: '1px solid #E5E5E5',
-      display: 'flex',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-    },
-    tableTitle: {
-      fontSize: '1.1rem',
-      fontWeight: '600',
-      color: '#000000',
-      margin: 0,
-    },
-    addButton: {
-      backgroundColor: '#DB4444',
-      color: '#FFFFFF',
-      padding: '0.5rem 1rem',
-      borderRadius: '6px',
-      textDecoration: 'none',
-      fontSize: '0.875rem',
-      display: 'flex',
-      alignItems: 'center',
-      gap: '0.5rem',
-      transition: 'background-color 0.3s ease',
-    },
-    tableWrapper: {
-      overflowX: 'auto',
-    },
-    table: {
-      width: '100%',
-      borderCollapse: 'collapse',
-    },
-    th: {
-      padding: '0.75rem 1.5rem',
-      textAlign: 'left',
-      fontSize: '0.75rem',
-      fontWeight: '600',
-      color: '#666666',
-      textTransform: 'uppercase',
-      letterSpacing: '0.05em',
-      borderBottom: '2px solid #E5E5E5',
-      backgroundColor: '#FAFAFA',
-    },
-    tr: {
-      borderBottom: '1px solid #F0F0F0',
-    },
-    td: {
-      padding: '0.75rem 1.5rem',
-      fontSize: '0.875rem',
-      color: '#000000',
-    },
-    productCell: {
-      display: 'flex',
-      alignItems: 'center',
-      gap: '0.75rem',
-    },
-    productImage: {
-      width: '40px',
-      height: '40px',
-      objectFit: 'cover',
-      borderRadius: '4px',
-      backgroundColor: '#F5F5F5',
-    },
-    productName: {
-      fontWeight: '500',
-      color: '#000000',
-    },
-    stockBadge: {
-      padding: '0.2rem 0.5rem',
-      borderRadius: '4px',
-      fontSize: '0.75rem',
-      fontWeight: '500',
-    },
-    stockIn: {
-      color: '#16A34A',
-      backgroundColor: '#F0FDF4',
-    },
-    stockOut: {
-      color: '#DC2626',
-      backgroundColor: '#FEF2F2',
-    },
-    statusBadge: {
-      padding: '0.2rem 0.5rem',
-      borderRadius: '4px',
-      fontSize: '0.75rem',
-      fontWeight: '500',
-    },
-    statusActive: {
-      color: '#16A34A',
-      backgroundColor: '#F0FDF4',
-    },
-    statusInactive: {
-      color: '#DC2626',
-      backgroundColor: '#FEF2F2',
-    },
-    actionButtons: {
-      display: 'flex',
-      gap: '0.5rem',
-    },
-    actionEdit: {
-      color: '#3B82F6',
-      textDecoration: 'none',
-      padding: '0.25rem',
-      transition: 'color 0.3s ease',
-    },
-    actionDelete: {
-      color: '#DC2626',
-      border: 'none',
-      background: 'none',
-      cursor: 'pointer',
-      padding: '0.25rem',
-      transition: 'color 0.3s ease',
-    },
-    actionView: {
-      color: '#8B5CF6',
-      textDecoration: 'none',
-      padding: '0.25rem',
-      transition: 'color 0.3s ease',
-    },
-    noData: {
-      padding: '2rem',
-      textAlign: 'center',
-      color: '#999999',
-    },
-  };
-
   return (
-    <AdminLayout>
-      <div style={styles.container}>
-        <h1 style={styles.pageTitle}>Dashboard</h1>
-        
-        {/* Stats Cards */}
-        <div style={styles.statsGrid}>
-          <div style={styles.statCard}>
-            <div style={styles.statContent}>
-              <p style={styles.statLabel}>Total Users</p>
-              <p style={styles.statNumber}>{stats.total_users || 0}</p>
-            </div>
-            <div style={styles.statIcon}><FaUsers /></div>
-          </div>
-          
-          <div style={styles.statCard}>
-            <div style={styles.statContent}>
-              <p style={styles.statLabel}>Total Products</p>
-              <p style={styles.statNumber}>{stats.total_products || 0}</p>
-            </div>
-            <div style={styles.statIcon}><FaBox /></div>
-          </div>
-          
-          <div style={styles.statCard}>
-            <div style={styles.statContent}>
-              <p style={styles.statLabel}>Total Orders</p>
-              <p style={styles.statNumber}>{stats.total_orders || 0}</p>
-            </div>
-            <div style={styles.statIcon}><FaShoppingCart /></div>
-          </div>
-          
-          <div style={styles.statCard}>
-            <div style={styles.statContent}>
-              <p style={styles.statLabel}>Total Revenue</p>
-              <p style={styles.statNumber}>{formatPrice(stats.total_revenue)}</p>
-            </div>
-            <div style={styles.statIcon}><FaDollarSign /></div>
-          </div>
-        </div>
-
-        {/* Charts Section */}
-        <div style={styles.chartsGrid}>
-          {/* Revenue Chart - Bar Chart */}
-          <div style={styles.chartCard}>
-            <div style={styles.chartHeader}>
-              <h3 style={styles.chartTitle}>Revenue (Last 7 Days)</h3>
-            </div>
-            <div style={styles.chartWrapper}>
-              {chartData.revenues.some(v => v > 0) ? (
-                <Bar data={barChartData} options={barChartOptions} />
-              ) : (
-                <div style={styles.noData}>No revenue data available</div>
-              )}
-            </div>
-          </div>
-
-          {/* Orders Chart - Line Chart */}
-          <div style={styles.chartCard}>
-            <div style={styles.chartHeader}>
-              <h3 style={styles.chartTitle}>Order Trends</h3>
-            </div>
-            <div style={styles.chartWrapper}>
-              {chartData.orderCounts.some(v => v > 0) ? (
-                <Line data={lineChartData} options={lineChartOptions} />
-              ) : (
-                <div style={styles.noData}>No order data available</div>
-              )}
-            </div>
-          </div>
-
-          {/* Order Status - Doughnut Chart */}
-          <div style={styles.chartCard}>
-            <div style={styles.chartHeader}>
-              <h3 style={styles.chartTitle}>Order Status Distribution</h3>
-            </div>
-            <div style={styles.chartWrapperSmall}>
-              {chartData.statusData.some(v => v > 0) ? (
-                <Doughnut data={doughnutData} options={doughnutOptions} />
-              ) : (
-                <div style={styles.noData}>No status data available</div>
-              )}
-            </div>
-          </div>
-
-          {/* Quick Stats */}
-          <div style={styles.quickStatsCard}>
-            <div style={styles.chartHeader}>
-              <h3 style={styles.chartTitle}>Quick Overview</h3>
-            </div>
-            <div style={styles.quickStatsGrid}>
-              <div style={styles.quickStat}>
-                <span style={styles.quickStatLabel}>Pending Orders</span>
-                <span style={styles.quickStatValue}>{stats.pending_orders || 0}</span>
-              </div>
-              <div style={styles.quickStat}>
-                <span style={styles.quickStatLabel}>Last 30 Days</span>
-                <span style={styles.quickStatValue}>{stats.orders_last_30_days || 0}</span>
-              </div>
-              <div style={styles.quickStat}>
-                <span style={styles.quickStatLabel}>Total Revenue</span>
-                <span style={styles.quickStatValue}>{formatPrice(stats.total_revenue)}</span>
-              </div>
-              <div style={styles.quickStat}>
-                <span style={styles.quickStatLabel}>Total Products</span>
-                <span style={styles.quickStatValue}>{stats.total_products || 0}</span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Products Table */}
-        <div style={styles.tableCard}>
-          <div style={styles.tableHeader}>
-            <h2 style={styles.tableTitle}>Recent Products</h2>
-            <Link to="/admin/products/new" style={styles.addButton}>
-              <FaPlus /> Add Product
-            </Link>
-          </div>
-          
-          {loading ? (
-            <div style={styles.loadingText}>Loading...</div>
-          ) : productList.length === 0 ? (
-            <div style={styles.noData}>No products found</div>
-          ) : (
-            <div style={styles.tableWrapper}>
-              <table style={styles.table}>
-                <thead>
-                  <tr>
-                    <th style={styles.th}>Product</th>
-                    <th style={styles.th}>Price</th>
-                    <th style={styles.th}>Stock</th>
-                    <th style={styles.th}>Status</th>
-                    <th style={styles.th}>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {productList.slice(0, 10).map(product => {
-                    const imageUrl = getImageUrl(product.images?.[0]?.image_url);
-                    
-                    return (
-                      <tr key={product.id || Math.random()} style={styles.tr}>
-                        <td style={styles.td}>
-                          <div style={styles.productCell}>
-                            <img 
-                              src={imageUrl}
-                              alt={product.name || 'Product'} 
-                              style={styles.productImage}
-                              onError={(e) => {
-                                e.target.src = '/api/placeholder/40/40';
-                              }}
-                            />
-                            <span style={styles.productName}>{product.name || 'Unnamed Product'}</span>
-                          </div>
-                        </td>
-                        <td style={styles.td}>{formatPrice(product.price)}</td>
-                        <td style={styles.td}>
-                          <span style={{
-                            ...styles.stockBadge,
-                            ...((product.stock_quantity || 0) > 0 ? styles.stockIn : styles.stockOut)
-                          }}>
-                            {product.stock_quantity || 0}
-                          </span>
-                        </td>
-                        <td style={styles.td}>
-                          <span style={{
-                            ...styles.statusBadge,
-                            ...(product.is_active ? styles.statusActive : styles.statusInactive)
-                          }}>
-                            {product.is_active ? 'Active' : 'Inactive'}
-                          </span>
-                        </td>
-                        <td style={styles.td}>
-                          <div style={styles.actionButtons}>
-                            <Link to={`/admin/products/${product.id}`} style={styles.actionEdit}>
-                              <FaEdit />
-                            </Link>
-                            <button style={styles.actionDelete}>
-                              <FaTrash />
-                            </button>
-                            <Link to={`/product/${product.slug || ''}`} style={styles.actionView}>
-                              <FaEye />
-                            </Link>
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
-      </div>
-
+    <>
+      {/* ===== INTERNAL CSS - ALL STYLES HERE ===== */}
       <style>{`
-        @keyframes spin {
+        /* ----- Loading ----- */
+        .admin-loading-container {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          min-height: 60vh;
+        }
+        .admin-spinner {
+          width: 40px;
+          height: 40px;
+          border: 4px solid #E5E5E5;
+          border-top: 4px solid #DB4444;
+          border-radius: 50%;
+          animation: adminSpin 1s linear infinite;
+        }
+        .admin-loading-text {
+          margin-top: 1rem;
+          color: #666666;
+        }
+        @keyframes adminSpin {
           0% { transform: rotate(0deg); }
           100% { transform: rotate(360deg); }
         }
+
+        /* ----- Container ----- */
+        .admin-dashboard {
+          max-width: 1280px;
+          margin: 0 auto;
+        }
+        .admin-page-title {
+          font-size: 1.75rem;
+          font-weight: 700;
+          color: #000000;
+          margin-bottom: 2rem;
+        }
+
+        /* ----- Stats Grid ----- */
+        .admin-stats-grid {
+          display: grid;
+          grid-template-columns: repeat(4, 1fr);
+          gap: 1.5rem;
+          margin-bottom: 2rem;
+        }
+        .admin-stat-card {
+          background-color: #FFFFFF;
+          padding: 1.5rem;
+          border-radius: 8px;
+          box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        .admin-stat-card:hover {
+          transform: translateY(-4px);
+          box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+        }
+        .admin-stat-content {
+          display: flex;
+          flex-direction: column;
+          gap: 0.25rem;
+        }
+        .admin-stat-label {
+          font-size: 0.875rem;
+          color: #666666;
+          margin: 0;
+        }
+        .admin-stat-number {
+          font-size: 1.75rem;
+          font-weight: 700;
+          color: #000000;
+          margin: 0;
+        }
+        .admin-stat-icon {
+          font-size: 2.5rem;
+          color: #DB4444;
+          opacity: 0.7;
+        }
+
+        /* ----- Charts Grid ----- */
+        .admin-charts-grid {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 1.5rem;
+          margin-bottom: 2rem;
+        }
+        .admin-chart-card {
+          background-color: #FFFFFF;
+          padding: 1.5rem;
+          border-radius: 8px;
+          box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        }
+        .admin-chart-wrapper {
+          height: 300px;
+          position: relative;
+        }
+        .admin-chart-wrapper-small {
+          height: 280px;
+          position: relative;
+          max-width: 320px;
+          margin: 0 auto;
+        }
+        .admin-chart-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin-bottom: 1rem;
+        }
+        .admin-chart-title {
+          font-size: 1rem;
+          font-weight: 600;
+          color: #000000;
+          margin: 0;
+        }
+
+        /* ----- Quick Stats ----- */
+        .admin-quick-stats {
+          background-color: #FFFFFF;
+          padding: 1.5rem;
+          border-radius: 8px;
+          box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+          display: flex;
+          flex-direction: column;
+        }
+        .admin-quick-stats-grid {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 1rem;
+          flex: 1;
+          align-items: center;
+        }
+        .admin-quick-stat {
+          background-color: #F8F8F8;
+          padding: 1rem;
+          border-radius: 8px;
+          text-align: center;
+          transition: background-color 0.3s ease;
+        }
+        .admin-quick-stat:hover {
+          background-color: #F0F0F0;
+        }
+        .admin-quick-stat-label {
+          display: block;
+          font-size: 0.75rem;
+          color: #999999;
+          margin-bottom: 0.25rem;
+        }
+        .admin-quick-stat-value {
+          display: block;
+          font-size: 1.25rem;
+          font-weight: 700;
+          color: #000000;
+        }
+
+        /* ----- Table ----- */
+        .admin-table-card {
+          background-color: #FFFFFF;
+          border-radius: 8px;
+          box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+          overflow: hidden;
+        }
+        .admin-table-header {
+          padding: 1.5rem;
+          border-bottom: 1px solid #E5E5E5;
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          flex-wrap: wrap;
+          gap: 1rem;
+        }
+        .admin-table-title {
+          font-size: 1.1rem;
+          font-weight: 600;
+          color: #000000;
+          margin: 0;
+        }
+        .admin-add-button {
+          background-color: #DB4444;
+          color: #FFFFFF;
+          padding: 0.5rem 1rem;
+          border-radius: 6px;
+          text-decoration: none;
+          font-size: 0.875rem;
+          display: flex;
+          align-items: center;
+          gap: 0.5rem;
+          transition: background-color 0.3s ease;
+        }
+        .admin-add-button:hover {
+          background-color: #B33A3A;
+          color: #FFFFFF;
+        }
+        .admin-table-wrapper {
+          overflow-x: auto;
+        }
+        .admin-table {
+          width: 100%;
+          border-collapse: collapse;
+        }
+        .admin-th {
+          padding: 0.75rem 1.5rem;
+          text-align: left;
+          font-size: 0.75rem;
+          font-weight: 600;
+          color: #666666;
+          text-transform: uppercase;
+          letter-spacing: 0.05em;
+          border-bottom: 2px solid #E5E5E5;
+          background-color: #FAFAFA;
+        }
+        .admin-tr {
+          border-bottom: 1px solid #F0F0F0;
+          transition: background-color 0.3s ease;
+        }
+        .admin-tr:hover {
+          background-color: #FAFAFA;
+        }
+        .admin-td {
+          padding: 0.75rem 1.5rem;
+          font-size: 0.875rem;
+          color: #000000;
+        }
+        .admin-product-cell {
+          display: flex;
+          align-items: center;
+          gap: 0.75rem;
+        }
+        .admin-product-image {
+          width: 40px;
+          height: 40px;
+          object-fit: cover;
+          border-radius: 4px;
+          background-color: #F5F5F5;
+        }
+        .admin-product-name {
+          font-weight: 500;
+          color: #000000;
+        }
+
+        /* ----- Badges ----- */
+        .admin-badge {
+          padding: 0.2rem 0.5rem;
+          border-radius: 4px;
+          font-size: 0.75rem;
+          font-weight: 500;
+          display: inline-block;
+        }
+        .admin-badge-stock-in {
+          color: #16A34A;
+          background-color: #F0FDF4;
+        }
+        .admin-badge-stock-out {
+          color: #DC2626;
+          background-color: #FEF2F2;
+        }
+        .admin-badge-active {
+          color: #16A34A;
+          background-color: #F0FDF4;
+        }
+        .admin-badge-inactive {
+          color: #DC2626;
+          background-color: #FEF2F2;
+        }
+
+        /* ----- Action Buttons ----- */
+        .admin-actions {
+          display: flex;
+          gap: 0.5rem;
+        }
+        .admin-action-edit {
+          color: #3B82F6;
+          text-decoration: none;
+          padding: 0.25rem;
+          transition: color 0.3s ease;
+        }
+        .admin-action-edit:hover {
+          color: #2563EB;
+        }
+        .admin-action-delete {
+          color: #DC2626;
+          border: none;
+          background: none;
+          cursor: pointer;
+          padding: 0.25rem;
+          transition: color 0.3s ease;
+        }
+        .admin-action-delete:hover {
+          color: #B91C1C;
+        }
+        .admin-action-view {
+          color: #8B5CF6;
+          text-decoration: none;
+          padding: 0.25rem;
+          transition: color 0.3s ease;
+        }
+        .admin-action-view:hover {
+          color: #7C3AED;
+        }
+        .admin-no-data {
+          padding: 2rem;
+          text-align: center;
+          color: #999999;
+        }
+
+        /* ============================================== */
+        /* ===== RESPONSIVE MEDIA QUERIES ===== */
+        /* ============================================== */
+
+        @media (max-width: 1024px) {
+          .admin-stats-grid {
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1rem;
+          }
+          .admin-charts-grid {
+            grid-template-columns: 1fr;
+            gap: 1rem;
+          }
+          .admin-chart-wrapper-small {
+            max-width: 280px;
+          }
+        }
+
+        @media (max-width: 768px) {
+          .admin-page-title {
+            font-size: 1.5rem;
+            margin-bottom: 1.5rem;
+          }
+          
+          .admin-stats-grid {
+            grid-template-columns: repeat(2, 1fr);
+            gap: 0.75rem;
+          }
+          .admin-stat-card {
+            padding: 1rem;
+          }
+          .admin-stat-number {
+            font-size: 1.25rem;
+          }
+          .admin-stat-icon {
+            font-size: 1.75rem;
+          }
+          .admin-stat-label {
+            font-size: 0.75rem;
+          }
+          
+          .admin-chart-card {
+            padding: 1rem;
+          }
+          .admin-chart-wrapper {
+            height: 220px;
+          }
+          .admin-chart-wrapper-small {
+            height: 200px;
+            max-width: 220px;
+          }
+          
+          .admin-quick-stats-grid {
+            grid-template-columns: 1fr 1fr;
+            gap: 0.75rem;
+          }
+          .admin-quick-stat {
+            padding: 0.75rem;
+          }
+          .admin-quick-stat-value {
+            font-size: 1rem;
+          }
+          
+          .admin-table-header {
+            padding: 1rem;
+          }
+          .admin-th,
+          .admin-td {
+            padding: 0.5rem 0.75rem;
+            font-size: 0.8rem;
+          }
+          .admin-product-image {
+            width: 32px;
+            height: 32px;
+          }
+          .admin-add-button {
+            padding: 0.4rem 0.75rem;
+            font-size: 0.8rem;
+          }
+        }
+
+        @media (max-width: 480px) {
+          .admin-stats-grid {
+            grid-template-columns: 1fr 1fr;
+            gap: 0.5rem;
+          }
+          .admin-stat-card {
+            padding: 0.75rem;
+          }
+          .admin-stat-number {
+            font-size: 1rem;
+          }
+          .admin-stat-icon {
+            font-size: 1.5rem;
+          }
+          .admin-stat-label {
+            font-size: 0.65rem;
+          }
+          
+          .admin-chart-card {
+            padding: 0.75rem;
+          }
+          .admin-chart-wrapper {
+            height: 180px;
+          }
+          .admin-chart-wrapper-small {
+            height: 180px;
+            max-width: 180px;
+          }
+          .admin-chart-title {
+            font-size: 0.875rem;
+          }
+          
+          .admin-quick-stats-grid {
+            grid-template-columns: 1fr 1fr;
+            gap: 0.5rem;
+          }
+          .admin-quick-stat {
+            padding: 0.5rem;
+          }
+          .admin-quick-stat-value {
+            font-size: 0.9rem;
+          }
+          .admin-quick-stat-label {
+            font-size: 0.65rem;
+          }
+          
+          .admin-table-header {
+            flex-direction: column;
+            align-items: stretch;
+            padding: 0.75rem;
+          }
+          .admin-table-title {
+            font-size: 1rem;
+          }
+          .admin-add-button {
+            justify-content: center;
+          }
+          .admin-th,
+          .admin-td {
+            padding: 0.4rem 0.5rem;
+            font-size: 0.7rem;
+          }
+          .admin-product-image {
+            width: 28px;
+            height: 28px;
+          }
+          .admin-product-name {
+            font-size: 0.75rem;
+          }
+          .admin-actions {
+            flex-direction: column;
+            gap: 0.25rem;
+          }
+          .admin-badge {
+            font-size: 0.65rem;
+            padding: 0.15rem 0.35rem;
+          }
+        }
+
+        @media (max-width: 360px) {
+          .admin-stats-grid {
+            grid-template-columns: 1fr 1fr;
+            gap: 0.4rem;
+          }
+          .admin-stat-card {
+            padding: 0.5rem;
+          }
+          .admin-stat-number {
+            font-size: 0.85rem;
+          }
+          .admin-stat-icon {
+            font-size: 1.25rem;
+          }
+          .admin-stat-label {
+            font-size: 0.6rem;
+          }
+          .admin-chart-wrapper {
+            height: 150px;
+          }
+          .admin-chart-wrapper-small {
+            height: 150px;
+            max-width: 150px;
+          }
+          .admin-th,
+          .admin-td {
+            padding: 0.3rem 0.4rem;
+            font-size: 0.65rem;
+          }
+          .admin-product-image {
+            width: 24px;
+            height: 24px;
+          }
+          .admin-product-name {
+            font-size: 0.65rem;
+          }
+        }
       `}</style>
-    </AdminLayout>
+
+      <AdminLayout>
+        <div className="admin-dashboard">
+          <h1 className="admin-page-title">Dashboard</h1>
+          
+          {/* Stats Cards */}
+          <div className="admin-stats-grid">
+            <div className="admin-stat-card">
+              <div className="admin-stat-content">
+                <p className="admin-stat-label">Total Users</p>
+                <p className="admin-stat-number">{stats.total_users || 0}</p>
+              </div>
+              <div className="admin-stat-icon"><FaUsers /></div>
+            </div>
+            
+            <div className="admin-stat-card">
+              <div className="admin-stat-content">
+                <p className="admin-stat-label">Total Products</p>
+                <p className="admin-stat-number">{stats.total_products || 0}</p>
+              </div>
+              <div className="admin-stat-icon"><FaBox /></div>
+            </div>
+            
+            <div className="admin-stat-card">
+              <div className="admin-stat-content">
+                <p className="admin-stat-label">Total Orders</p>
+                <p className="admin-stat-number">{stats.total_orders || 0}</p>
+              </div>
+              <div className="admin-stat-icon"><FaShoppingCart /></div>
+            </div>
+            
+            <div className="admin-stat-card">
+              <div className="admin-stat-content">
+                <p className="admin-stat-label">Total Revenue</p>
+                <p className="admin-stat-number">{formatPrice(stats.total_revenue)}</p>
+              </div>
+              <div className="admin-stat-icon"><FaDollarSign /></div>
+            </div>
+          </div>
+
+          {/* Charts Section */}
+          <div className="admin-charts-grid">
+            {/* Revenue Chart - Bar Chart */}
+            <div className="admin-chart-card">
+              <div className="admin-chart-header">
+                <h3 className="admin-chart-title">Revenue (Last 7 Days)</h3>
+              </div>
+              <div className="admin-chart-wrapper">
+                {chartData.revenues.some(v => v > 0) ? (
+                  <Bar data={barChartData} options={barChartOptions} />
+                ) : (
+                  <div className="admin-no-data">No revenue data available</div>
+                )}
+              </div>
+            </div>
+
+            {/* Orders Chart - Line Chart */}
+            <div className="admin-chart-card">
+              <div className="admin-chart-header">
+                <h3 className="admin-chart-title">Order Trends</h3>
+              </div>
+              <div className="admin-chart-wrapper">
+                {chartData.orderCounts.some(v => v > 0) ? (
+                  <Line data={lineChartData} options={lineChartOptions} />
+                ) : (
+                  <div className="admin-no-data">No order data available</div>
+                )}
+              </div>
+            </div>
+
+            {/* Order Status - Doughnut Chart */}
+            <div className="admin-chart-card">
+              <div className="admin-chart-header">
+                <h3 className="admin-chart-title">Order Status Distribution</h3>
+              </div>
+              <div className="admin-chart-wrapper-small">
+                {chartData.statusData.some(v => v > 0) ? (
+                  <Doughnut data={doughnutData} options={doughnutOptions} />
+                ) : (
+                  <div className="admin-no-data">No status data available</div>
+                )}
+              </div>
+            </div>
+
+            {/* Quick Stats */}
+            <div className="admin-quick-stats">
+              <div className="admin-chart-header">
+                <h3 className="admin-chart-title">Quick Overview</h3>
+              </div>
+              <div className="admin-quick-stats-grid">
+                <div className="admin-quick-stat">
+                  <span className="admin-quick-stat-label">Pending Orders</span>
+                  <span className="admin-quick-stat-value">{stats.pending_orders || 0}</span>
+                </div>
+                <div className="admin-quick-stat">
+                  <span className="admin-quick-stat-label">Last 30 Days</span>
+                  <span className="admin-quick-stat-value">{stats.orders_last_30_days || 0}</span>
+                </div>
+                <div className="admin-quick-stat">
+                  <span className="admin-quick-stat-label">Total Revenue</span>
+                  <span className="admin-quick-stat-value">{formatPrice(stats.total_revenue)}</span>
+                </div>
+                <div className="admin-quick-stat">
+                  <span className="admin-quick-stat-label">Total Products</span>
+                  <span className="admin-quick-stat-value">{stats.total_products || 0}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Products Table */}
+          <div className="admin-table-card">
+            <div className="admin-table-header">
+              <h2 className="admin-table-title">Recent Products</h2>
+              <Link to="/admin/products/new" className="admin-add-button">
+                <FaPlus /> Add Product
+              </Link>
+            </div>
+            
+            {loading ? (
+              <div className="admin-loading-text" style={{ padding: '2rem', textAlign: 'center' }}>Loading...</div>
+            ) : productList.length === 0 ? (
+              <div className="admin-no-data">No products found</div>
+            ) : (
+              <div className="admin-table-wrapper">
+                <table className="admin-table">
+                  <thead>
+                    <tr>
+                      <th className="admin-th">Product</th>
+                      <th className="admin-th">Price</th>
+                      <th className="admin-th">Stock</th>
+                      <th className="admin-th">Status</th>
+                      <th className="admin-th">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {productList.slice(0, 10).map(product => {
+                      const imageUrl = getImageUrl(product.images?.[0]?.image_url);
+                      
+                      return (
+                        <tr key={product.id || Math.random()} className="admin-tr">
+                          <td className="admin-td">
+                            <div className="admin-product-cell">
+                              <img 
+                                src={imageUrl}
+                                alt={product.name || 'Product'} 
+                                className="admin-product-image"
+                                onError={(e) => {
+                                  e.target.src = '/api/placeholder/40/40';
+                                }}
+                              />
+                              <span className="admin-product-name">{product.name || 'Unnamed Product'}</span>
+                            </div>
+                          </td>
+                          <td className="admin-td">{formatPrice(product.price)}</td>
+                          <td className="admin-td">
+                            <span className={`admin-badge ${(product.stock_quantity || 0) > 0 ? 'admin-badge-stock-in' : 'admin-badge-stock-out'}`}>
+                              {product.stock_quantity || 0}
+                            </span>
+                          </td>
+                          <td className="admin-td">
+                            <span className={`admin-badge ${product.is_active ? 'admin-badge-active' : 'admin-badge-inactive'}`}>
+                              {product.is_active ? 'Active' : 'Inactive'}
+                            </span>
+                          </td>
+                          <td className="admin-td">
+                            <div className="admin-actions">
+                              <Link to={`/admin/products/${product.id}`} className="admin-action-edit">
+                                <FaEdit />
+                              </Link>
+                              <button className="admin-action-delete">
+                                <FaTrash />
+                              </button>
+                              <Link to={`/product/${product.slug || ''}`} className="admin-action-view">
+                                <FaEye />
+                              </Link>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        </div>
+      </AdminLayout>
+    </>
   );
 };
 
