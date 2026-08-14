@@ -194,8 +194,6 @@ const createProduct = async (req, res) => {
 
         const imageUrl = img.image_url;
 
-        // Production security:
-        // Only allow Cloudinary URLs.
         if (
           !imageUrl ||
           !imageUrl.startsWith(
@@ -677,7 +675,6 @@ const uploadImages = async (req, res) => {
 
     for (const file of req.files) {
 
-      // Upload buffer directly to Cloudinary
       const result = await new Promise(
         (resolve, reject) => {
 
@@ -685,7 +682,21 @@ const uploadImages = async (req, res) => {
             cloudinary.uploader.upload_stream(
               {
                 folder: 'stara-crochet/products',
-                resource_type: 'image'
+                resource_type: 'image',
+
+                // ========================================
+                // AUTOMATIC IMAGE OPTIMIZATION
+                // ========================================
+
+                transformation: [
+                  {
+                    width: 1200,
+                    height: 1200,
+                    crop: 'limit',
+                    quality: 'auto:good',
+                    fetch_format: 'auto'
+                  }
+                ]
               },
               (error, result) => {
                 if (error) {
@@ -705,6 +716,14 @@ const uploadImages = async (req, res) => {
         result.public_id
       );
 
+      console.log(
+        'Original file:',
+        file.originalname,
+        'size:',
+        Math.round(file.size / 1024),
+        'KB'
+      );
+
       uploadedImages.push({
         image_url: result.secure_url,
         alt_text: file.originalname,
@@ -715,7 +734,7 @@ const uploadImages = async (req, res) => {
     console.log(
       'Cloudinary upload complete:',
       uploadedImages.length,
-      'image(s)'
+      'optimized image(s)'
     );
 
     return res.status(200).json(
