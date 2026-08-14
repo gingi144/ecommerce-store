@@ -189,11 +189,11 @@ const AdminFlashSaleForm = () => {
       
       let response;
       if (isEditMode) {
-        response = await axios.put(`http://localhost:5000/api/admin/flash-sales/${id}`, payload, {
+        response = await api.put(`/api/admin/flash-sales/${id}`, payload, {
           headers: { Authorization: `Bearer ${token}` }
         });
       } else {
-        response = await axios.post('http://localhost:5000/api/admin/flash-sales', payload, {
+        response = await api.post('/api/admin/flash-sales', payload, {
           headers: { Authorization: `Bearer ${token}` }
         });
       }

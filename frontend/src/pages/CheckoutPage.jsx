@@ -81,7 +81,7 @@ const CheckoutPage = () => {
       const orderData = {
         shippingAddress: formData.address,
         billingAddress: formData.address,
-        paymentMethod: 'M-PESA (via PayHero)',
+        paymentMethod: 'M-PESA (via Paystack)',
         items: cartItems.map(item => ({
           productId: item.id,
           quantity: item.quantity,
@@ -106,26 +106,55 @@ const CheckoutPage = () => {
 
       const orderId = orderResponse.data.id;
 
-      // Initiate PayHero payment
-      const paymentResponse = await api.post('/api/payments/payhero/initiate', {
-        orderId: orderId,
-        amount: finalTotal,
-        phoneNumber: mpesaPhone,
-        email: formData.email,
-        firstName: formData.firstName,
-        lastName: formData.lastName
-      }, {
-        headers: { Authorization: 'Bearer ' + token }
-      });
+      // Initiate Paystack payment
+    // Initiate Paystack payment
+const paymentResponse = await api.post(
+  '/api/payments/paystack/initiate',
+  {
+    orderId,
+    amount: finalTotal,
+    phoneNumber: mpesaPhone,
+    email: formData.email,
+    firstName: formData.firstName,
+    lastName: formData.lastName
+  },
+  {
+    headers: {
+      Authorization: 'Bearer ' + token
+    }
+  }
+);
 
-      if (paymentResponse.data.success) {
-        localStorage.setItem('payment_tracking_id', paymentResponse.data.tracking_id);
-        localStorage.setItem('pending_order_id', orderId);
-        clearCart();
-        window.location.href = paymentResponse.data.redirect_url;
-      } else {
-        setError(paymentResponse.data.error || 'Payment initiation failed');
-      }
+console.log('Paystack response:', paymentResponse.data);
+
+if (
+  paymentResponse.data.success &&
+  paymentResponse.data.authorization_url
+) {
+  // Paystack transaction reference
+  localStorage.setItem(
+    'payment_reference',
+    paymentResponse.data.reference
+  );
+
+  // Keep the order ID for the payment status page
+  localStorage.setItem(
+    'pending_order_id',
+    orderId
+  );
+
+  // Clear cart before redirecting to Paystack
+  clearCart();
+
+  // Redirect customer to Paystack hosted checkout
+  window.location.href =
+    paymentResponse.data.authorization_url;
+} else {
+  setError(
+    paymentResponse.data.error ||
+    'Unable to initialize Paystack payment.'
+  );
+}
       
     } catch (error) {
       console.error('Checkout error:', error);
@@ -604,7 +633,7 @@ const CheckoutPage = () => {
                       <label style={styles.label}>M-PESA Phone Number</label>
                       <input
                         type="tel"
-                        placeholder="e.g. 0712345678"
+                        placeholder=""
                         value={mpesaPhone}
                         onChange={(e) => setMpesaPhone(e.target.value)}
                         style={styles.mpesaInput}

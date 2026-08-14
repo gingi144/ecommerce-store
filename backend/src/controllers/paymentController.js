@@ -1,175 +1,93 @@
+
 const pool = require('../config/database');
 const axios = require('axios');
+const crypto = require('crypto');
 
 // ============================================================
 // CONFIGURATION
 // ============================================================
 
-const PAYHERO_API_BASE_URL =
-  process.env.PAYHERO_API_BASE_URL ||
-  'https://backend.payhero.co.ke/api/v2';
+const PAYSTACK_API_URL =
+  process.env.PAYSTACK_API_URL || 'https://api.paystack.co';
 
 const FRONTEND_URL =
   process.env.FRONTEND_URL ||
   'https://ecommerce-store-iota-tan.vercel.app';
 
-const PAYHERO_CALLBACK_URL =
-  process.env.PAYHERO_CALLBACK_URL ||
+const PAYSTACK_CALLBACK_URL =
+  process.env.PAYSTACK_CALLBACK_URL ||
   `${FRONTEND_URL}/payment-status`;
 
-const PAYHERO_IPN_URL =
-  process.env.PAYHERO_IPN_URL ||
-  'https://ecommerce-store-9o2p.onrender.com/api/payments/payhero/ipn';
-
 
 // ============================================================
-// GENERATE UNIQUE TRACKING ID
+// GENERATE UNIQUE PAYMENT REFERENCE
 // ============================================================
 
-const generateOrderTrackingId = () => {
+const generatePaymentReference = () => {
   return (
     'ORDER-' +
     Date.now() +
     '-' +
     Math.random()
       .toString(36)
-      .substring(2, 7)
+      .substring(2, 8)
       .toUpperCase()
   );
 };
 
 
 // ============================================================
-// PAYHERO AUTHENTICATION
+// PAYSTACK HEADERS
 // ============================================================
 
-const getAuthHeader = () => {
-  const basicAuth = process.env.PAYHERO_BASIC_AUTH_TOKEN;
+const getPaystackHeaders = () => {
+  const secretKey = process.env.PAYSTACK_SECRET_KEY;
 
-  if (basicAuth) {
-    return {
-      Authorization: basicAuth.startsWith('Basic ')
-        ? basicAuth
-        : `Basic ${basicAuth}`
-    };
+  if (!secretKey) {
+    throw new Error('PAYSTACK_SECRET_KEY is not configured.');
   }
-
-  const username = process.env.PAYHERO_API_USERNAME;
-  const password = process.env.PAYHERO_API_PASSWORD;
-
-  if (!username || !password) {
-    throw new Error(
-      'PayHero credentials are not configured. Set PAYHERO_BASIC_AUTH_TOKEN or PAYHERO_API_USERNAME/PAYHERO_API_PASSWORD.'
-    );
-  }
-
-  const credentials = Buffer
-    .from(`${username}:${password}`)
-    .toString('base64');
 
   return {
-    Authorization: `Basic ${credentials}`
+    Authorization: `Bearer ${secretKey}`,
+    'Content-Type': 'application/json',
+    Accept: 'application/json'
   };
 };
 
 
 // ============================================================
-// NORMALIZE KENYAN PHONE NUMBER
+// INITIATE PAYSTACK PAYMENT
 // ============================================================
 
-const normalizePhoneNumber = (phoneNumber) => {
-  if (!phoneNumber) {
-    return null;
-  }
-
-  let phone = String(phoneNumber)
-    .trim()
-    .replace(/\s+/g, '')
-    .replace(/-/g, '');
-
-  // +254712345678 -> 254712345678
-  if (phone.startsWith('+254')) {
-    phone = phone.substring(1);
-  }
-
-  // 0712345678 -> 254712345678
-  if (phone.startsWith('07') || phone.startsWith('01')) {
-    phone = '254' + phone.substring(1);
-  }
-
-  if (!/^254(7|1)\d{8}$/.test(phone)) {
-    throw new Error(
-      'Invalid Kenyan phone number. Use 07XXXXXXXX or 2547XXXXXXXX.'
-    );
-  }
-
-  return phone;
-};
-
-
-// ============================================================
-// INITIATE PAYHERO PAYMENT
-// ============================================================
-
-const initiatePayHeroPayment = async (req, res) => {
+const initiatePaystackPayment = async (req, res) => {
   console.log('========================================');
-  console.log('PAYHERO PAYMENT INITIATION');
+  console.log('PAYSTACK PAYMENT INITIATION');
   console.log('========================================');
-
-  console.log('Request body:', req.body);
 
   const {
     orderId,
     amount,
-    phoneNumber,
     email,
     firstName,
     lastName
   } = req.body;
 
-  // This is intentionally outside try/catch
-  // so the catch block can reference it.
-  let trackingId = null;
+  let paymentReference = null;
 
   // ==========================================================
   // VALIDATION
   // ==========================================================
 
-  if (!orderId || !amount || !phoneNumber) {
+  if (!orderId || !email) {
     return res.status(400).json({
       success: false,
-      error: 'Order ID, amount and phone number are required.'
-    });
-  }
-
-  const paymentAmount = Number(amount);
-
-  if (!Number.isFinite(paymentAmount) || paymentAmount <= 0) {
-    return res.status(400).json({
-      success: false,
-      error: 'Invalid payment amount.'
-    });
-  }
-
-  // ==========================================================
-  // NORMALIZE PHONE
-  // ==========================================================
-
-  let phone;
-
-  try {
-    phone = normalizePhoneNumber(phoneNumber);
-  } catch (error) {
-    return res.status(400).json({
-      success: false,
-      error: error.message
+      error: 'Order ID and email are required.'
     });
   }
 
   try {
-
     // ========================================================
-    // CHECK ORDER
+    // GET ORDER
     // ========================================================
 
     const orderResult = await pool.query(
@@ -198,38 +116,30 @@ const initiatePayHeroPayment = async (req, res) => {
     }
 
     // ========================================================
-    // GENERATE TRACKING ID
+    // USE DATABASE ORDER TOTAL
+    // NEVER TRUST FRONTEND AMOUNT
     // ========================================================
 
-    trackingId = generateOrderTrackingId();
+    const orderAmount = Number(order.total_amount);
 
-    console.log('Tracking ID:', trackingId);
-    console.log('Phone:', phone);
-    console.log('Amount:', paymentAmount);
-
-    // ========================================================
-    // CHECK PAYHERO CONFIGURATION
-    // ========================================================
-
-    const channelId = process.env.PAYHERO_CHANNEL_ID;
-
-    if (!channelId) {
-      throw new Error(
-        'PAYHERO_CHANNEL_ID is not configured on Render.'
-      );
+    if (!Number.isFinite(orderAmount) || orderAmount <= 0) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid order amount.'
+      });
     }
 
-    // IMPORTANT:
-    // PayHero requires a provider for the payment request.
-    //
-    // Set this in Render:
-    //
-    // PAYHERO_PROVIDER=m-pesa
-    //
-    // If your PayHero account uses a different provider value,
-    // use the exact value shown by your PayHero account/API.
-    const provider =
-      process.env.PAYHERO_PROVIDER || 'm-pesa';
+    const finalAmount = orderAmount;
+
+    // ========================================================
+    // GENERATE PAYSTACK REFERENCE
+    // ========================================================
+
+    paymentReference = generatePaymentReference();
+
+    console.log('Order ID:', orderId);
+    console.log('Payment reference:', paymentReference);
+    console.log('Amount:', finalAmount, 'KES');
 
     // ========================================================
     // SAVE PENDING PAYMENT
@@ -243,412 +153,287 @@ const initiatePayHeroPayment = async (req, res) => {
         payment_method,
         reference,
         status,
-        tracking_id,
         created_at,
         updated_at
       )
-      VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW())`,
+      VALUES ($1, $2, $3, $4, $5, NOW(), NOW())`,
       [
         orderId,
-        paymentAmount,
-        'PAYHERO',
-        trackingId,
-        'pending',
-        trackingId
+        finalAmount,
+        'PAYSTACK',
+        paymentReference,
+        'pending'
       ]
     );
 
+    // ========================================================
+    // SAVE REFERENCE TO ORDER
+    // ========================================================
+
     await pool.query(
       `UPDATE orders
-       SET payment_reference = $1
+       SET payment_reference = $1,
+           updated_at = NOW()
        WHERE id = $2`,
-      [trackingId, orderId]
+      [
+        paymentReference,
+        orderId
+      ]
     );
 
-    console.log('Pending payment saved.');
-
     // ========================================================
-    // PAYHERO PAYMENT PAYLOAD
+    // CUSTOMER NAME
     // ========================================================
 
     const customerName =
       `${firstName || ''} ${lastName || ''}`.trim() ||
-      email ||
       'Customer';
 
-    const payheroPayload = {
-      amount: Math.round(paymentAmount),
+    // ========================================================
+    // PAYSTACK USES KOBO/CENTS
+    //
+    // KES 1,000 -> 100000
+    // ========================================================
 
-      phone_number: phone,
+    const amountInSubunits =
+      Math.round(finalAmount * 100);
 
-      provider: provider,
+    // ========================================================
+    // PAYSTACK PAYLOAD
+    // ========================================================
 
-      channel_id: channelId,
+    const paystackPayload = {
+      email: email.trim(),
+      amount: amountInSubunits,
+      currency: 'KES',
+      reference: paymentReference,
+      callback_url: PAYSTACK_CALLBACK_URL,
 
-      external_reference: trackingId,
+      channels: [
+        'card',
+        'mobile_money',
+        'bank',
+        'bank_transfer',
+        'ussd',
+        'qr'
+      ],
 
-      customer_name: customerName,
-
-      callback_url: PAYHERO_IPN_URL
+      metadata: {
+        order_id: String(orderId),
+        order_reference: paymentReference,
+        customer_name: customerName,
+        customer_email: email.trim()
+      }
     };
 
-    console.log('========================================');
-    console.log('PAYHERO REQUEST');
-    console.log('========================================');
-
-    console.log('Endpoint:', `${PAYHERO_API_BASE_URL}/payments`);
-
-    console.log('Payload:', payheroPayload);
-
     // ========================================================
-    // CALL PAYHERO
+    // INITIALIZE TRANSACTION
     // ========================================================
 
-    const payheroResponse = await axios.post(
-      `${PAYHERO_API_BASE_URL}/payments`,
-      payheroPayload,
+    const response = await axios.post(
+      `${PAYSTACK_API_URL}/transaction/initialize`,
+      paystackPayload,
       {
-        headers: {
-          ...getAuthHeader(),
-          'Content-Type': 'application/json',
-          Accept: 'application/json'
-        },
+        headers: getPaystackHeaders(),
         timeout: 30000
       }
     );
 
-    console.log('========================================');
-    console.log('PAYHERO RESPONSE');
-    console.log('========================================');
+    const paystackData = response.data;
 
-    console.log(payheroResponse.data);
+    console.log('Paystack response:', paystackData);
 
-    // ========================================================
-    // EXTRACT PAYHERO REFERENCE
-    // ========================================================
-
-    const payheroData = payheroResponse.data || {};
-
-    const transactionReference =
-      payheroData.reference ||
-      payheroData.transaction_id ||
-      payheroData.transactionId ||
-      trackingId;
-
-    // ========================================================
-    // UPDATE PAYMENT REFERENCE
-    // ========================================================
-
-    await pool.query(
-      `UPDATE payments
-       SET reference = $1,
-           updated_at = NOW()
-       WHERE tracking_id = $2`,
-      [
-        transactionReference,
-        trackingId
-      ]
-    );
-
-    // ========================================================
-    // RETURN SUCCESS
-    // ========================================================
-
-    return res.status(200).json({
-      success: true,
-
-      message:
-        'Payment request sent. Please check your phone for the M-Pesa prompt.',
-
-      tracking_id: trackingId,
-
-      transaction_id:
-        payheroData.transaction_id ||
-        payheroData.transactionId ||
-        null,
-
-      reference: transactionReference,
-
-      redirect_url:
-        `${PAYHERO_CALLBACK_URL}?order_tracking_id=${encodeURIComponent(
-          trackingId
-        )}`
-    });
-
-  } catch (error) {
-
-    console.error('========================================');
-    console.error('PAYHERO PAYMENT ERROR');
-    console.error('========================================');
-
-    if (error.response) {
-
-      console.error(
-        'PayHero status:',
-        error.response.status
-      );
-
-      console.error(
-        'PayHero response:',
-        error.response.data
-      );
-
-    } else {
-
-      console.error(
-        'Error:',
-        error.message
+    if (
+      !paystackData ||
+      !paystackData.status ||
+      !paystackData.data
+    ) {
+      throw new Error(
+        paystackData?.message ||
+        'Paystack failed to initialize transaction.'
       );
     }
 
     // ========================================================
-    // MARK PAYMENT AS FAILED
+    // RETURN CHECKOUT INFORMATION
     // ========================================================
 
-    if (trackingId) {
-      try {
+    return res.status(200).json({
+      success: true,
+      message: 'Paystack payment initialized successfully.',
 
+      authorization_url:
+        paystackData.data.authorization_url,
+
+      access_code:
+        paystackData.data.access_code,
+
+      reference:
+        paystackData.data.reference ||
+        paymentReference
+    });
+
+  } catch (error) {
+    console.error('========================================');
+    console.error('PAYSTACK PAYMENT ERROR');
+    console.error('========================================');
+
+    console.error(
+      error.response?.data ||
+      error.message
+    );
+
+    // ========================================================
+    // MARK PAYMENT FAILED
+    // ========================================================
+
+    if (paymentReference) {
+      try {
         await pool.query(
           `UPDATE payments
            SET status = 'failed',
                updated_at = NOW()
-           WHERE tracking_id = $1`,
-          [trackingId]
+           WHERE reference = $1`,
+          [paymentReference]
         );
-
       } catch (dbError) {
-
         console.error(
-          'Failed to update failed payment:',
+          'Failed to update payment:',
           dbError.message
         );
       }
     }
 
-    // ========================================================
-    // RETURN ERROR
-    // ========================================================
-
     return res.status(500).json({
       success: false,
-
       error:
-        error.response?.data?.error_message ||
         error.response?.data?.message ||
-        error.response?.data?.error ||
         error.message ||
-        'Payment initiation failed.'
+        'Payment initialization failed.'
     });
   }
 };
 
 
 // ============================================================
-// PAYHERO IPN / CALLBACK
+// MARK PAYMENT AS COMPLETED
 // ============================================================
 
-const handlePayHeroIPN = async (req, res) => {
-
-  console.log('========================================');
-  console.log('PAYHERO IPN RECEIVED');
-  console.log('========================================');
-
-  console.log('PayHero callback body:', req.body);
+const markPaymentAsCompleted = async (
+  paymentId,
+  orderId,
+  reference
+) => {
+  const client = await pool.connect();
 
   try {
+    await client.query('BEGIN');
 
-    const data = req.body || {};
-
-    const transactionId =
-      data.transaction_id ||
-      data.transactionId ||
-      data.id ||
-      null;
-
-    const reference =
-      data.external_reference ||
-      data.reference ||
-      data.externalReference ||
-      null;
-
-    const status = String(
-      data.status || ''
-    ).toUpperCase();
-
-    console.log('Transaction ID:', transactionId);
-    console.log('Reference:', reference);
-    console.log('Status:', status);
-
-    if (!reference && !transactionId) {
-
-      return res.status(400).json({
-        status: 'ERROR',
-        message: 'Missing transaction reference.'
-      });
-    }
-
-    // ========================================================
-    // FIND PAYMENT
-    // ========================================================
-
-    const lookupReference =
-      reference || transactionId;
-
-    const paymentResult = await pool.query(
+    // Lock payment row
+    const paymentResult = await client.query(
       `SELECT *
        FROM payments
-       WHERE reference = $1
-          OR tracking_id = $1
-       LIMIT 1`,
-      [lookupReference]
+       WHERE id = $1
+       FOR UPDATE`,
+      [paymentId]
     );
 
     if (paymentResult.rows.length === 0) {
-
-      console.warn(
-        'Payment not found:',
-        lookupReference
-      );
-
-      // Acknowledge callback so PayHero does not
-      // continuously retry an unknown transaction.
-      return res.status(200).json({
-        status: 'OK'
-      });
+      throw new Error('Payment record not found.');
     }
 
     const payment = paymentResult.rows[0];
 
     // ========================================================
-    // DETERMINE STATUS
+    // IDEMPOTENCY
     // ========================================================
 
-    let paymentStatus = 'pending';
-
-    if (
-      status === 'COMPLETED' ||
-      status === 'SUCCESS' ||
-      status === 'SUCCESSFUL'
-    ) {
-      paymentStatus = 'completed';
-    }
-
-    if (
-      status === 'FAILED' ||
-      status === 'CANCELLED' ||
-      status === 'CANCELED'
-    ) {
-      paymentStatus = 'failed';
+    if (payment.status === 'completed') {
+      await client.query('COMMIT');
+      return;
     }
 
     // ========================================================
     // UPDATE PAYMENT
     // ========================================================
 
-    await pool.query(
+    await client.query(
       `UPDATE payments
-       SET status = $1,
+       SET status = 'completed',
+           reference = $1,
            updated_at = NOW()
        WHERE id = $2`,
       [
-        paymentStatus,
-        payment.id
+        reference,
+        paymentId
       ]
     );
 
     // ========================================================
-    // PAYMENT SUCCESS
+    // UPDATE ORDER
     // ========================================================
 
-    if (paymentStatus === 'completed') {
-
-      await pool.query(
-        `UPDATE orders
-         SET payment_status = 'paid',
-             status = 'processing'
-         WHERE id = $1`,
-        [payment.order_id]
-      );
-
-      console.log(
-        `Order ${payment.order_id} marked PAID.`
-      );
-    }
-
-    // ========================================================
-    // PAYMENT FAILED
-    // ========================================================
-
-    if (paymentStatus === 'failed') {
-
-      await pool.query(
-        `UPDATE orders
-         SET payment_status = 'failed'
-         WHERE id = $1`,
-        [payment.order_id]
-      );
-
-      console.log(
-        `Order ${payment.order_id} marked PAYMENT FAILED.`
-      );
-    }
-
-    // ========================================================
-    // ACKNOWLEDGE PAYHERO
-    // ========================================================
-
-    return res.status(200).json({
-      status: 'OK'
-    });
-
-  } catch (error) {
-
-    console.error(
-      'PayHero IPN processing error:',
-      error
+    await client.query(
+      `UPDATE orders
+       SET payment_status = 'paid',
+           status = 'processing',
+           payment_reference = $1,
+           updated_at = NOW()
+       WHERE id = $2`,
+      [
+        reference,
+        orderId
+      ]
     );
 
-    return res.status(500).json({
-      status: 'ERROR',
-      error: 'IPN processing failed.'
-    });
+    await client.query('COMMIT');
+
+    console.log(
+      `Order ${orderId} marked PAID.`
+    );
+
+  } catch (error) {
+    await client.query('ROLLBACK');
+    throw error;
+  } finally {
+    client.release();
   }
 };
 
 
 // ============================================================
-// VERIFY PAYMENT
+// VERIFY PAYSTACK PAYMENT
 // ============================================================
 
-const verifyPayHeroPayment = async (req, res) => {
+const verifyPaystackPayment = async (req, res) => {
+  const { reference } = req.params;
 
-  const { tracking_id } = req.params;
+  console.log('========================================');
+  console.log('PAYSTACK PAYMENT VERIFICATION');
+  console.log('Reference:', reference);
+  console.log('========================================');
 
-  console.log(
-    'Verifying payment:',
-    tracking_id
-  );
-
-  if (!tracking_id) {
+  if (!reference) {
     return res.status(400).json({
       success: false,
-      error: 'Tracking ID is required.'
+      error: 'Payment reference is required.'
     });
   }
 
   try {
+    // ========================================================
+    // FIND PAYMENT
+    // ========================================================
 
     const paymentResult = await pool.query(
       `SELECT *
        FROM payments
-       WHERE tracking_id = $1
-          OR reference = $1
+       WHERE reference = $1
        LIMIT 1`,
-      [tracking_id]
+      [reference]
     );
 
     if (paymentResult.rows.length === 0) {
-
       return res.status(404).json({
         success: false,
         error: 'Payment not found.'
@@ -657,42 +442,342 @@ const verifyPayHeroPayment = async (req, res) => {
 
     const payment = paymentResult.rows[0];
 
+    // ========================================================
+    // ALREADY COMPLETED
+    // ========================================================
+
+    if (payment.status === 'completed') {
+      return res.status(200).json({
+        success: true,
+        message: 'Payment already verified.',
+        payment: {
+          id: payment.id,
+          order_id: payment.order_id,
+          amount: payment.amount,
+          status: payment.status,
+          reference: payment.reference
+        }
+      });
+    }
+
+    // ========================================================
+    // VERIFY WITH PAYSTACK
+    // ========================================================
+
+    const response = await axios.get(
+      `${PAYSTACK_API_URL}/transaction/verify/${encodeURIComponent(
+        reference
+      )}`,
+      {
+        headers: getPaystackHeaders(),
+        timeout: 30000
+      }
+    );
+
+    const paystackResponse = response.data;
+
+    if (
+      !paystackResponse ||
+      !paystackResponse.status ||
+      !paystackResponse.data
+    ) {
+      return res.status(400).json({
+        success: false,
+        error:
+          paystackResponse?.message ||
+          'Unable to verify payment.'
+      });
+    }
+
+    const transaction = paystackResponse.data;
+
+    console.log(
+      'Paystack status:',
+      transaction.status
+    );
+
+    // ========================================================
+    // VERIFY AMOUNT
+    // ========================================================
+
+    const expectedAmount =
+      Math.round(Number(payment.amount) * 100);
+
+    const paidAmount =
+      Number(transaction.amount);
+
+    if (paidAmount !== expectedAmount) {
+      console.error('PAYMENT AMOUNT MISMATCH');
+
+      return res.status(400).json({
+        success: false,
+        error:
+          'Payment amount does not match the order amount.'
+      });
+    }
+
+    // ========================================================
+    // VERIFY CURRENCY
+    // ========================================================
+
+    if (
+      transaction.currency &&
+      transaction.currency !== 'KES'
+    ) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid payment currency.'
+      });
+    }
+
+    // ========================================================
+    // SUCCESS
+    // ========================================================
+
+    if (transaction.status === 'success') {
+      await markPaymentAsCompleted(
+        payment.id,
+        payment.order_id,
+        transaction.reference
+      );
+
+      return res.status(200).json({
+        success: true,
+        message: 'Payment verified successfully.',
+
+        payment: {
+          order_id: payment.order_id,
+          amount: payment.amount,
+          status: 'completed',
+          reference: transaction.reference
+        }
+      });
+    }
+
+    // ========================================================
+    // NOT YET SUCCESSFUL
+    // ========================================================
+
     return res.status(200).json({
-      success: true,
+      success: false,
 
       payment: {
-        id: payment.id,
         order_id: payment.order_id,
         amount: payment.amount,
-        status: payment.status,
-        reference: payment.reference,
-        tracking_id: payment.tracking_id,
-        created_at: payment.created_at,
-        updated_at: payment.updated_at
+        status: transaction.status,
+        reference: transaction.reference
       }
     });
 
   } catch (error) {
-
     console.error(
-      'Verify payment error:',
-      error
+      'Paystack verification error:',
+      error.response?.data ||
+      error.message
     );
 
     return res.status(500).json({
       success: false,
-      error: 'Failed to verify payment.'
+      error:
+        error.response?.data?.message ||
+        error.message ||
+        'Failed to verify payment.'
     });
   }
 };
 
 
 // ============================================================
-// EXPORT
+// PAYSTACK WEBHOOK
+// ============================================================
+
+const handlePaystackWebhook = async (req, res) => {
+  console.log('========================================');
+  console.log('PAYSTACK WEBHOOK RECEIVED');
+  console.log('========================================');
+
+  try {
+    const secretKey =
+      process.env.PAYSTACK_SECRET_KEY;
+
+    if (!secretKey) {
+      console.error(
+        'PAYSTACK_SECRET_KEY is missing.'
+      );
+
+      return res.status(500).json({
+        error: 'Webhook configuration error.'
+      });
+    }
+
+    const signature =
+      req.headers['x-paystack-signature'];
+
+    if (!signature) {
+      return res.status(401).json({
+        error: 'Missing Paystack signature.'
+      });
+    }
+
+    // ========================================================
+    // CREATE EXPECTED SIGNATURE
+    // ========================================================
+
+    const expectedSignature =
+      crypto
+        .createHmac('sha512', secretKey)
+        .update(JSON.stringify(req.body))
+        .digest('hex');
+
+    // Avoid timingSafeEqual length error
+    if (
+      signature.length !==
+      expectedSignature.length
+    ) {
+      return res.status(401).json({
+        error: 'Invalid webhook signature.'
+      });
+    }
+
+    const signaturesMatch =
+      crypto.timingSafeEqual(
+        Buffer.from(signature),
+        Buffer.from(expectedSignature)
+      );
+
+    if (!signaturesMatch) {
+      return res.status(401).json({
+        error: 'Invalid webhook signature.'
+      });
+    }
+
+    const event = req.body || {};
+
+    console.log(
+      'Paystack event:',
+      event.event
+    );
+
+    // ========================================================
+    // CHARGE SUCCESS
+    // ========================================================
+
+    if (event.event === 'charge.success') {
+      const transaction = event.data || {};
+
+      const reference =
+        transaction.reference;
+
+      if (!reference) {
+        return res.status(200).json({
+          status: 'OK'
+        });
+      }
+
+      // ======================================================
+      // FIND PAYMENT
+      // ======================================================
+
+      const paymentResult =
+        await pool.query(
+          `SELECT *
+           FROM payments
+           WHERE reference = $1
+           LIMIT 1`,
+          [reference]
+        );
+
+      if (paymentResult.rows.length === 0) {
+        console.warn(
+          'Payment not found:',
+          reference
+        );
+
+        return res.status(200).json({
+          status: 'OK'
+        });
+      }
+
+      const payment =
+        paymentResult.rows[0];
+
+      // ======================================================
+      // VERIFY AMOUNT
+      // ======================================================
+
+      const expectedAmount =
+        Math.round(
+          Number(payment.amount) * 100
+        );
+
+      const paidAmount =
+        Number(transaction.amount);
+
+      if (expectedAmount !== paidAmount) {
+        console.error(
+          'Webhook payment amount mismatch.'
+        );
+
+        return res.status(400).json({
+          error: 'Payment amount mismatch.'
+        });
+      }
+
+      // ======================================================
+      // VERIFY CURRENCY
+      // ======================================================
+
+      if (
+        transaction.currency &&
+        transaction.currency !== 'KES'
+      ) {
+        return res.status(400).json({
+          error: 'Invalid payment currency.'
+        });
+      }
+
+      // ======================================================
+      // COMPLETE PAYMENT
+      // ======================================================
+
+      await markPaymentAsCompleted(
+        payment.id,
+        payment.order_id,
+        reference
+      );
+
+      console.log(
+        `Paystack payment ${reference} completed.`
+      );
+    }
+
+    // ========================================================
+    // ACKNOWLEDGE PAYSTACK
+    // ========================================================
+
+    return res.status(200).json({
+      status: 'OK'
+    });
+
+  } catch (error) {
+    console.error(
+      'Paystack webhook error:',
+      error
+    );
+
+    return res.status(500).json({
+      error: 'Webhook processing failed.'
+    });
+  }
+};
+
+
+// ============================================================
+// EXPORTS
 // ============================================================
 
 module.exports = {
-  initiatePayHeroPayment,
-  handlePayHeroIPN,
-  verifyPayHeroPayment
+  initiatePaystackPayment,
+  verifyPaystackPayment,
+  handlePaystackWebhook
 };
