@@ -1,15 +1,38 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { FaSearch, FaShoppingCart, FaUser, FaHeart, FaBars, FaTimes } from 'react-icons/fa';
 import { useCart } from '../../context/CartContext';
 import { useAuth } from '../../context/AuthContext';
+import api from '../../api';
 
 const Navbar = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [wishlistCount, setWishlistCount] = useState(0);
   const navigate = useNavigate();
   const { getTotalItems } = useCart();
   const { isAuthenticated, user, logout, isAdmin } = useAuth();
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      fetchWishlistCount();
+    } else {
+      setWishlistCount(0);
+    }
+  }, [isAuthenticated]);
+
+  const fetchWishlistCount = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await api.get('/api/wishlist', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setWishlistCount(response.data.length || 0);
+    } catch (error) {
+      console.error('Error fetching wishlist count:', error);
+      setWishlistCount(0);
+    }
+  };
 
   const handleSearch = (e) => {
     e.preventDefault();
@@ -486,6 +509,11 @@ const Navbar = () => {
               onMouseLeave={handleIconLeave}
             >
               <FaHeart size={20} />
+              {wishlistCount > 0 && (
+                <span style={styles.badge}>
+                  {wishlistCount}
+                </span>
+              )}
             </Link>
 
             <Link 
@@ -525,6 +553,9 @@ const Navbar = () => {
                 <div className="dropdown" style={styles.userDropdown}>
                   <Link to="/account" style={styles.dropdownItem} className="dropdown-item">
                     My Account
+                  </Link>
+                  <Link to="/wishlist" style={styles.dropdownItem} className="dropdown-item">
+                    Wishlist ({wishlistCount})
                   </Link>
                   {isAdmin && (
                     <Link to="/admin" style={{...styles.dropdownItem, color: '#DB4444', fontWeight: '600'}} className="dropdown-item">
@@ -594,6 +625,9 @@ const Navbar = () => {
               <div style={styles.mobileActionsRow}>
                 <Link to="/wishlist" style={styles.mobileIconLink} className="mobile-link">
                   <FaHeart size={16} /> Wishlist
+                  {wishlistCount > 0 && (
+                    <span style={styles.mobileBadge}>{wishlistCount}</span>
+                  )}
                 </Link>
                 <Link to="/cart" style={styles.mobileIconLink} className="mobile-link">
                   <FaShoppingCart size={16} /> Cart
