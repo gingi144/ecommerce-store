@@ -64,7 +64,6 @@ const CheckoutPage = () => {
         return;
       }
 
-      // Validate M-PESA phone number
       if (!mpesaPhone) {
         setError('Please enter your M-PESA phone number');
         setLoading(false);
@@ -77,7 +76,6 @@ const CheckoutPage = () => {
       const discount = couponDiscount || 0;
       const finalTotal = subtotal + shipping + vat - discount;
 
-      // Create order
       const orderData = {
         shippingAddress: formData.address,
         billingAddress: formData.address,
@@ -99,62 +97,51 @@ const CheckoutPage = () => {
         deliveryNotes: formData.notes
       };
 
-      // Create order
       const orderResponse = await api.post('/api/orders', orderData, {
         headers: { Authorization: 'Bearer ' + token }
       });
 
       const orderId = orderResponse.data.id;
 
-      // Initiate Paystack payment
-    // Initiate Paystack payment
-const paymentResponse = await api.post(
-  '/api/payments/paystack/initiate',
-  {
-    orderId,
-    amount: finalTotal,
-    phoneNumber: mpesaPhone,
-    email: formData.email,
-    firstName: formData.firstName,
-    lastName: formData.lastName
-  },
-  {
-    headers: {
-      Authorization: 'Bearer ' + token
-    }
-  }
-);
+      const paymentResponse = await api.post(
+        '/api/payments/paystack/initiate',
+        {
+          orderId,
+          amount: finalTotal,
+          phoneNumber: mpesaPhone,
+          email: formData.email,
+          firstName: formData.firstName,
+          lastName: formData.lastName
+        },
+        {
+          headers: {
+            Authorization: 'Bearer ' + token
+          }
+        }
+      );
 
-console.log('Paystack response:', paymentResponse.data);
+      console.log('Paystack response:', paymentResponse.data);
 
-if (
-  paymentResponse.data.success &&
-  paymentResponse.data.authorization_url
-) {
-  // Paystack transaction reference
-  localStorage.setItem(
-    'payment_reference',
-    paymentResponse.data.reference
-  );
-
-  // Keep the order ID for the payment status page
-  localStorage.setItem(
-    'pending_order_id',
-    orderId
-  );
-
-  // Clear cart before redirecting to Paystack
-  clearCart();
-
-  // Redirect customer to Paystack hosted checkout
-  window.location.href =
-    paymentResponse.data.authorization_url;
-} else {
-  setError(
-    paymentResponse.data.error ||
-    'Unable to initialize Paystack payment.'
-  );
-}
+      if (
+        paymentResponse.data.success &&
+        paymentResponse.data.authorization_url
+      ) {
+        localStorage.setItem(
+          'payment_reference',
+          paymentResponse.data.reference
+        );
+        localStorage.setItem(
+          'pending_order_id',
+          orderId
+        );
+        clearCart();
+        window.location.href = paymentResponse.data.authorization_url;
+      } else {
+        setError(
+          paymentResponse.data.error ||
+          'Unable to initialize Paystack payment.'
+        );
+      }
       
     } catch (error) {
       console.error('Checkout error:', error);
@@ -166,16 +153,40 @@ if (
 
   if (cartItems.length === 0) {
     return (
-      <div>
+      <>
+        <style>{`
+          .checkout-empty-container {
+            text-align: center;
+            padding: 4rem 1rem;
+          }
+          .checkout-empty-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #000000;
+            margin-bottom: 1rem;
+          }
+          .checkout-empty-button {
+            display: inline-block;
+            background-color: #000000;
+            color: #FFFFFF;
+            padding: 0.75rem 2rem;
+            border-radius: 6px;
+            text-decoration: none;
+            transition: background-color 0.3s ease;
+          }
+          .checkout-empty-button:hover {
+            background-color: #333333;
+          }
+        `}</style>
         <Navbar />
-        <div style={styles.emptyContainer}>
-          <h2 style={styles.emptyTitle}>Your cart is empty</h2>
-          <Link to="/shop" style={styles.emptyButton}>
+        <div className="checkout-empty-container">
+          <h2 className="checkout-empty-title">Your cart is empty</h2>
+          <Link to="/shop" className="checkout-empty-button">
             Continue Shopping
           </Link>
         </div>
         <Footer />
-      </div>
+      </>
     );
   }
 
@@ -185,460 +196,631 @@ if (
   const discount = couponDiscount || 0;
   const finalTotal = subtotal + shipping + vat - discount;
 
-  const styles = {
-    container: {
-      maxWidth: '1280px',
-      margin: '0 auto',
-      padding: '2rem 1rem',
-      backgroundColor: '#FFFFFF',
-    },
-    emptyContainer: {
-      textAlign: 'center',
-      padding: '4rem 1rem',
-    },
-    emptyTitle: {
-      fontSize: '1.5rem',
-      fontWeight: '700',
-      color: '#000000',
-      marginBottom: '1rem',
-    },
-    emptyButton: {
-      display: 'inline-block',
-      backgroundColor: '#000000',
-      color: '#FFFFFF',
-      padding: '0.75rem 2rem',
-      borderRadius: '6px',
-      textDecoration: 'none',
-      transition: 'background-color 0.3s ease',
-    },
-    breadcrumb: {
-      display: 'flex',
-      alignItems: 'center',
-      gap: '0.5rem',
-      fontSize: '0.875rem',
-      color: '#999999',
-      marginBottom: '1.5rem',
-    },
-    breadcrumbLink: {
-      color: '#999999',
-      textDecoration: 'none',
-      transition: 'color 0.3s ease',
-    },
-    breadcrumbCurrent: {
-      color: '#000000',
-    },
-    checkoutLayout: {
-      display: 'grid',
-      gridTemplateColumns: '1fr 380px',
-      gap: '2rem',
-    },
-    leftSection: {
-      display: 'flex',
-      flexDirection: 'column',
-      gap: '1.5rem',
-    },
-    sectionCard: {
-      backgroundColor: '#FFFFFF',
-      border: '1px solid #EEEEEE',
-      borderRadius: '8px',
-      overflow: 'hidden',
-    },
-    sectionHeader: {
-      display: 'flex',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-      padding: '1rem 1.5rem',
-      cursor: 'pointer',
-      backgroundColor: '#FAFAFA',
-      borderBottom: '1px solid #EEEEEE',
-    },
-    sectionTitle: {
-      fontSize: '1rem',
-      fontWeight: '600',
-      color: '#000000',
-    },
-    sectionNumber: {
-      display: 'inline-flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      width: '24px',
-      height: '24px',
-      backgroundColor: '#000000',
-      color: '#FFFFFF',
-      borderRadius: '50%',
-      fontSize: '0.75rem',
-      fontWeight: '700',
-      marginRight: '0.5rem',
-    },
-    sectionContent: {
-      padding: '1.5rem',
-    },
-    mpesaDetails: {
-      backgroundColor: '#F9FAFB',
-      padding: '1rem',
-      borderRadius: '6px',
-    },
-    mpesaText: {
-      fontSize: '0.85rem',
-      color: '#666666',
-      marginBottom: '0.5rem',
-      lineHeight: '1.5',
-    },
-    mpesaInput: {
-      padding: '0.6rem 0.75rem',
-      border: '1px solid #E5E5E5',
-      borderRadius: '6px',
-      fontSize: '0.95rem',
-      outline: 'none',
-      transition: 'border-color 0.3s ease, box-shadow 0.3s ease',
-      color: '#000000',
-      backgroundColor: '#FFFFFF',
-      boxSizing: 'border-box',
-      width: '100%',
-      maxWidth: '250px',
-    },
-    formGroup: {
-      display: 'flex',
-      flexDirection: 'column',
-      gap: '0.25rem',
-      marginBottom: '0.75rem',
-    },
-    formRow: {
-      display: 'grid',
-      gridTemplateColumns: '1fr 1fr',
-      gap: '0.75rem',
-    },
-    fullWidth: {
-      gridColumn: '1 / -1',
-    },
-    label: {
-      fontSize: '0.8rem',
-      fontWeight: '500',
-      color: '#000000',
-    },
-    input: {
-      padding: '0.6rem 0.75rem',
-      border: '1px solid #E5E5E5',
-      borderRadius: '6px',
-      fontSize: '0.9rem',
-      outline: 'none',
-      transition: 'border-color 0.3s ease, box-shadow 0.3s ease',
-      color: '#000000',
-      backgroundColor: '#FFFFFF',
-      boxSizing: 'border-box',
-      width: '100%',
-    },
-    notesInput: {
-      padding: '0.6rem 0.75rem',
-      border: '1px solid #E5E5E5',
-      borderRadius: '6px',
-      fontSize: '0.9rem',
-      outline: 'none',
-      transition: 'border-color 0.3s ease, box-shadow 0.3s ease',
-      color: '#000000',
-      backgroundColor: '#FFFFFF',
-      boxSizing: 'border-box',
-      width: '100%',
-      fontFamily: 'inherit',
-      resize: 'vertical',
-      minHeight: '60px',
-    },
-    orderSummary: {
-      backgroundColor: '#FFFFFF',
-      padding: '1.5rem',
-      borderRadius: '8px',
-      border: '1px solid #EEEEEE',
-      position: 'sticky',
-      top: '80px',
-      height: 'fit-content',
-    },
-    summaryTitle: {
-      fontSize: '1.1rem',
-      fontWeight: '700',
-      color: '#000000',
-      marginBottom: '1rem',
-    },
-    orderItem: {
-      display: 'flex',
-      justifyContent: 'space-between',
-      padding: '0.4rem 0',
-      fontSize: '0.9rem',
-      borderBottom: '1px solid #F0F0F0',
-    },
-    orderItemName: {
-      color: '#000000',
-    },
-    orderItemQty: {
-      color: '#666666',
-    },
-    orderItemPrice: {
-      fontWeight: '500',
-      color: '#000000',
-    },
-    divider: {
-      border: 'none',
-      borderTop: '1px solid #E5E5E5',
-      margin: '0.5rem 0',
-    },
-    couponSection: {
-      display: 'flex',
-      gap: '0.5rem',
-      marginBottom: '0.75rem',
-    },
-    couponInput: {
-      flex: 1,
-      padding: '0.5rem 0.75rem',
-      border: '1px solid #E5E5E5',
-      borderRadius: '6px',
-      fontSize: '0.875rem',
-      outline: 'none',
-      transition: 'border-color 0.3s ease, box-shadow 0.3s ease',
-    },
-    applyButton: {
-      backgroundColor: '#000000',
-      color: '#FFFFFF',
-      padding: '0.5rem 1rem',
-      border: 'none',
-      borderRadius: '6px',
-      cursor: 'pointer',
-      transition: 'background-color 0.3s ease',
-      whiteSpace: 'nowrap',
-    },
-    summaryRow: {
-      display: 'flex',
-      justifyContent: 'space-between',
-      padding: '0.3rem 0',
-      fontSize: '0.9rem',
-    },
-    summaryLabel: {
-      color: '#666666',
-    },
-    summaryValue: {
-      fontWeight: '500',
-      color: '#000000',
-    },
-    discountValue: {
-      color: '#DB4444',
-    },
-    totalRow: {
-      display: 'flex',
-      justifyContent: 'space-between',
-      padding: '0.75rem 0',
-      fontSize: '1.1rem',
-      fontWeight: '700',
-      borderTop: '2px solid #EEEEEE',
-      marginTop: '0.5rem',
-    },
-    totalAmount: {
-      color: '#DB4444',
-    },
-    payButton: {
-      width: '100%',
-      backgroundColor: '#DB4444',
-      color: '#FFFFFF',
-      padding: '0.75rem',
-      border: 'none',
-      borderRadius: '6px',
-      fontSize: '1.1rem',
-      fontWeight: '600',
-      cursor: 'pointer',
-      marginTop: '0.5rem',
-      transition: 'background-color 0.3s ease',
-    },
-    payButtonDisabled: {
-      opacity: 0.6,
-      cursor: 'not-allowed',
-    },
-    errorBox: {
-      backgroundColor: '#FEF2F2',
-      color: '#DC2626',
-      padding: '0.75rem',
-      borderRadius: '6px',
-      marginBottom: '1rem',
-      fontSize: '0.875rem',
-    },
-    mpesaLogoWrapper: {
-      display: 'flex',
-      alignItems: 'center',
-      gap: '0.5rem',
-      marginBottom: '0.75rem',
-    },
-  };
-
-  const handleInputFocus = (e) => {
-    e.target.style.borderColor = '#DB4444';
-    e.target.style.boxShadow = '0 0 0 3px rgba(219, 68, 68, 0.1)';
-  };
-
-  const handleInputBlur = (e) => {
-    e.target.style.borderColor = '#E5E5E5';
-    e.target.style.boxShadow = 'none';
-  };
-
-  const handleApplyHover = (e) => {
-    e.target.style.backgroundColor = '#333333';
-  };
-
-  const handleApplyLeave = (e) => {
-    e.target.style.backgroundColor = '#000000';
-  };
-
-  const handlePayHover = (e) => {
-    if (!loading) e.target.style.backgroundColor = '#B33A3A';
-  };
-
-  const handlePayLeave = (e) => {
-    if (!loading) e.target.style.backgroundColor = '#DB4444';
-  };
-
   return (
-    <div>
+    <>
+      {/* ===== INTERNAL CSS - ALL STYLES HERE ===== */}
+      <style>{`
+        /* ----- Container ----- */
+        .checkout-container {
+          max-width: 1280px;
+          margin: 0 auto;
+          padding: 2rem 1rem;
+          background-color: #FFFFFF;
+        }
+
+        /* ----- Breadcrumb ----- */
+        .checkout-breadcrumb {
+          display: flex;
+          align-items: center;
+          gap: 0.5rem;
+          font-size: 0.875rem;
+          color: #999999;
+          margin-bottom: 1.5rem;
+        }
+        .checkout-breadcrumb a {
+          color: #999999;
+          text-decoration: none;
+          transition: color 0.3s ease;
+        }
+        .checkout-breadcrumb a:hover {
+          color: #DB4444;
+        }
+        .checkout-breadcrumb-current {
+          color: #000000;
+        }
+
+        /* ----- Layout ----- */
+        .checkout-layout {
+          display: grid;
+          grid-template-columns: 1fr 380px;
+          gap: 2rem;
+        }
+        .checkout-left {
+          display: flex;
+          flex-direction: column;
+          gap: 1.5rem;
+        }
+
+        /* ----- Section Cards ----- */
+        .checkout-section {
+          background-color: #FFFFFF;
+          border: 1px solid #EEEEEE;
+          border-radius: 8px;
+          overflow: hidden;
+          transition: box-shadow 0.3s ease;
+        }
+        .checkout-section:hover {
+          box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+        }
+        .checkout-section-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          padding: 1rem 1.5rem;
+          cursor: pointer;
+          background-color: #FAFAFA;
+          border-bottom: 1px solid #EEEEEE;
+          transition: background-color 0.3s ease;
+        }
+        .checkout-section-header:hover {
+          background-color: #F5F5F5;
+        }
+        .checkout-section-title {
+          font-size: 1rem;
+          font-weight: 600;
+          color: #000000;
+        }
+        .checkout-section-number {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          width: 24px;
+          height: 24px;
+          background-color: #000000;
+          color: #FFFFFF;
+          border-radius: 50%;
+          font-size: 0.75rem;
+          font-weight: 700;
+          margin-right: 0.5rem;
+        }
+        .checkout-section-content {
+          padding: 1.5rem;
+        }
+
+        /* ----- Form ----- */
+        .checkout-form-row {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 0.75rem;
+        }
+        .checkout-full-width {
+          grid-column: 1 / -1;
+        }
+        .checkout-form-group {
+          display: flex;
+          flex-direction: column;
+          gap: 0.25rem;
+          margin-bottom: 0.75rem;
+        }
+        .checkout-label {
+          font-size: 0.8rem;
+          font-weight: 500;
+          color: #000000;
+        }
+        .checkout-input {
+          padding: 0.6rem 0.75rem;
+          border: 1px solid #E5E5E5;
+          border-radius: 6px;
+          font-size: 0.9rem;
+          outline: none;
+          transition: border-color 0.3s ease, box-shadow 0.3s ease;
+          color: #000000;
+          background-color: #FFFFFF;
+          box-sizing: border-box;
+          width: 100%;
+        }
+        .checkout-input:focus {
+          border-color: #DB4444;
+          box-shadow: 0 0 0 3px rgba(219, 68, 68, 0.1);
+        }
+        .checkout-input::placeholder {
+          color: #AAAAAA;
+        }
+        .checkout-textarea {
+          padding: 0.6rem 0.75rem;
+          border: 1px solid #E5E5E5;
+          border-radius: 6px;
+          font-size: 0.9rem;
+          outline: none;
+          transition: border-color 0.3s ease, box-shadow 0.3s ease;
+          color: #000000;
+          background-color: #FFFFFF;
+          box-sizing: border-box;
+          width: 100%;
+          font-family: inherit;
+          resize: vertical;
+          min-height: 60px;
+        }
+        .checkout-textarea:focus {
+          border-color: #DB4444;
+          box-shadow: 0 0 0 3px rgba(219, 68, 68, 0.1);
+        }
+        .checkout-textarea::placeholder {
+          color: #AAAAAA;
+        }
+
+        /* ----- M-PESA ----- */
+        .checkout-mpesa-details {
+          background-color: #F9FAFB;
+          padding: 1rem;
+          border-radius: 6px;
+        }
+        .checkout-mpesa-text {
+          font-size: 0.85rem;
+          color: #666666;
+          margin-bottom: 0.5rem;
+          line-height: 1.5;
+        }
+        .checkout-mpesa-input {
+          padding: 0.6rem 0.75rem;
+          border: 1px solid #E5E5E5;
+          border-radius: 6px;
+          font-size: 0.95rem;
+          outline: none;
+          transition: border-color 0.3s ease, box-shadow 0.3s ease;
+          color: #000000;
+          background-color: #FFFFFF;
+          box-sizing: border-box;
+          width: 100%;
+          max-width: 250px;
+        }
+        .checkout-mpesa-input:focus {
+          border-color: #DB4444;
+          box-shadow: 0 0 0 3px rgba(219, 68, 68, 0.1);
+        }
+        .checkout-mpesa-logo {
+          display: flex;
+          align-items: center;
+          gap: 0.5rem;
+          margin-bottom: 0.75rem;
+        }
+        .checkout-mpesa-label {
+          font-weight: 600;
+          color: #000000;
+        }
+
+        /* ----- Error Box ----- */
+        .checkout-error {
+          background-color: #FEF2F2;
+          color: #DC2626;
+          padding: 0.75rem;
+          border-radius: 6px;
+          margin-bottom: 1rem;
+          font-size: 0.875rem;
+          border: 1px solid #FCA5A5;
+        }
+
+        /* ----- Order Summary (Sidebar) ----- */
+        .checkout-summary {
+          background-color: #FFFFFF;
+          padding: 1.5rem;
+          border-radius: 8px;
+          border: 1px solid #EEEEEE;
+          position: sticky;
+          top: 80px;
+          height: fit-content;
+        }
+        .checkout-summary-title {
+          font-size: 1.1rem;
+          font-weight: 700;
+          color: #000000;
+          margin-bottom: 1rem;
+        }
+        .checkout-order-item {
+          display: flex;
+          justify-content: space-between;
+          padding: 0.4rem 0;
+          font-size: 0.9rem;
+          border-bottom: 1px solid #F0F0F0;
+        }
+        .checkout-order-item:last-child {
+          border-bottom: none;
+        }
+        .checkout-order-item-name {
+          color: #000000;
+        }
+        .checkout-order-item-qty {
+          color: #666666;
+        }
+        .checkout-order-item-price {
+          font-weight: 500;
+          color: #000000;
+        }
+        .checkout-divider {
+          border: none;
+          border-top: 1px solid #E5E5E5;
+          margin: 0.5rem 0;
+        }
+
+        /* ----- Coupon ----- */
+        .checkout-coupon {
+          display: flex;
+          gap: 0.5rem;
+          margin-bottom: 0.75rem;
+        }
+        .checkout-coupon-input {
+          flex: 1;
+          padding: 0.5rem 0.75rem;
+          border: 1px solid #E5E5E5;
+          border-radius: 6px;
+          font-size: 0.875rem;
+          outline: none;
+          transition: border-color 0.3s ease, box-shadow 0.3s ease;
+        }
+        .checkout-coupon-input:focus {
+          border-color: #DB4444;
+          box-shadow: 0 0 0 3px rgba(219, 68, 68, 0.1);
+        }
+        .checkout-apply-btn {
+          background-color: #000000;
+          color: #FFFFFF;
+          padding: 0.5rem 1rem;
+          border: none;
+          border-radius: 6px;
+          cursor: pointer;
+          transition: background-color 0.3s ease;
+          white-space: nowrap;
+        }
+        .checkout-apply-btn:hover {
+          background-color: #333333;
+        }
+
+        /* ----- Summary Rows ----- */
+        .checkout-summary-row {
+          display: flex;
+          justify-content: space-between;
+          padding: 0.3rem 0;
+          font-size: 0.9rem;
+        }
+        .checkout-summary-label {
+          color: #666666;
+        }
+        .checkout-summary-value {
+          font-weight: 500;
+          color: #000000;
+        }
+        .checkout-discount-value {
+          color: #DB4444;
+        }
+        .checkout-total-row {
+          display: flex;
+          justify-content: space-between;
+          padding: 0.75rem 0;
+          font-size: 1.1rem;
+          font-weight: 700;
+          border-top: 2px solid #EEEEEE;
+          margin-top: 0.5rem;
+        }
+        .checkout-total-label {
+          color: #000000;
+        }
+        .checkout-total-amount {
+          color: #DB4444;
+        }
+
+        /* ----- Pay Button ----- */
+        .checkout-pay-btn {
+          width: 100%;
+          background-color: #DB4444;
+          color: #FFFFFF;
+          padding: 0.75rem;
+          border: none;
+          border-radius: 6px;
+          font-size: 1.1rem;
+          font-weight: 600;
+          cursor: pointer;
+          margin-top: 0.5rem;
+          transition: background-color 0.3s ease;
+        }
+        .checkout-pay-btn:hover:not(:disabled) {
+          background-color: #B33A3A;
+        }
+        .checkout-pay-btn:disabled {
+          opacity: 0.6;
+          cursor: not-allowed;
+        }
+
+        /* ============================================== */
+        /* ===== RESPONSIVE MEDIA QUERIES ===== */
+        /* ============================================== */
+
+        @media (max-width: 1024px) {
+          .checkout-layout {
+            grid-template-columns: 1fr 340px;
+            gap: 1.5rem;
+          }
+        }
+
+        @media (max-width: 768px) {
+          .checkout-container {
+            padding: 1rem 0.75rem;
+          }
+          
+          .checkout-breadcrumb {
+            font-size: 0.75rem;
+            margin-bottom: 1rem;
+          }
+          
+          .checkout-layout {
+            grid-template-columns: 1fr;
+            gap: 1.5rem;
+          }
+          
+          .checkout-summary {
+            position: static;
+            order: -1;
+          }
+          
+          .checkout-form-row {
+            grid-template-columns: 1fr;
+            gap: 0;
+          }
+          
+          .checkout-section-content {
+            padding: 1rem;
+          }
+          .checkout-section-header {
+            padding: 0.75rem 1rem;
+          }
+          
+          .checkout-mpesa-input {
+            max-width: 100%;
+          }
+          
+          .checkout-summary {
+            padding: 1.25rem;
+          }
+        }
+
+        @media (max-width: 480px) {
+          .checkout-container {
+            padding: 0.75rem 0.5rem;
+          }
+          
+          .checkout-breadcrumb {
+            font-size: 0.7rem;
+            flex-wrap: wrap;
+          }
+          
+          .checkout-section-title {
+            font-size: 0.9rem;
+          }
+          .checkout-section-number {
+            width: 20px;
+            height: 20px;
+            font-size: 0.65rem;
+          }
+          .checkout-section-content {
+            padding: 0.75rem;
+          }
+          
+          .checkout-input,
+          .checkout-textarea,
+          .checkout-mpesa-input {
+            font-size: 0.85rem;
+            padding: 0.5rem 0.6rem;
+          }
+          .checkout-label {
+            font-size: 0.75rem;
+          }
+          
+          .checkout-summary {
+            padding: 1rem;
+          }
+          .checkout-summary-title {
+            font-size: 1rem;
+          }
+          .checkout-order-item {
+            font-size: 0.8rem;
+            padding: 0.3rem 0;
+          }
+          .checkout-total-row {
+            font-size: 1rem;
+            padding: 0.5rem 0;
+          }
+          .checkout-pay-btn {
+            font-size: 1rem;
+            padding: 0.6rem;
+          }
+          .checkout-coupon-input {
+            font-size: 0.8rem;
+          }
+          .checkout-apply-btn {
+            font-size: 0.8rem;
+            padding: 0.4rem 0.75rem;
+          }
+          .checkout-mpesa-text {
+            font-size: 0.8rem;
+          }
+          
+          .checkout-error {
+            font-size: 0.8rem;
+            padding: 0.5rem;
+          }
+        }
+
+        @media (max-width: 360px) {
+          .checkout-container {
+            padding: 0.5rem 0.25rem;
+          }
+          .checkout-section-content {
+            padding: 0.5rem;
+          }
+          .checkout-input,
+          .checkout-textarea {
+            font-size: 0.8rem;
+            padding: 0.4rem 0.5rem;
+          }
+          .checkout-summary {
+            padding: 0.75rem;
+          }
+          .checkout-order-item {
+            font-size: 0.75rem;
+          }
+          .checkout-pay-btn {
+            font-size: 0.9rem;
+            padding: 0.5rem;
+          }
+        }
+      `}</style>
+
       <Navbar />
-      <div style={styles.container}>
-        <div style={styles.breadcrumb}>
-          <Link to="/" style={styles.breadcrumbLink}>Home</Link>
+      <div className="checkout-container">
+        {/* Breadcrumb */}
+        <div className="checkout-breadcrumb">
+          <Link to="/">Home</Link>
           <span>/</span>
-          <Link to="/cart" style={styles.breadcrumbLink}>Cart</Link>
+          <Link to="/cart">Cart</Link>
           <span>/</span>
-          <span style={styles.breadcrumbCurrent}>Checkout</span>
+          <span className="checkout-breadcrumb-current">Checkout</span>
         </div>
 
-        {error && <div style={styles.errorBox}>{error}</div>}
+        {error && <div className="checkout-error">{error}</div>}
 
-        <div style={styles.checkoutLayout}>
-          <div style={styles.leftSection}>
+        <div className="checkout-layout">
+          <div className="checkout-left">
             {/* Billing Details */}
-            <div style={styles.sectionCard}>
-              <div style={styles.sectionHeader} onClick={() => toggleSection('billing')}>
-                <span style={styles.sectionTitle}>
-                  <span style={styles.sectionNumber}>1</span> Billing Details
+            <div className="checkout-section">
+              <div className="checkout-section-header" onClick={() => toggleSection('billing')}>
+                <span className="checkout-section-title">
+                  <span className="checkout-section-number">1</span> Billing Details
                 </span>
                 {expandedSection === 'billing' ? <FaChevronUp /> : <FaChevronDown />}
               </div>
               {expandedSection === 'billing' && (
-                <div style={styles.sectionContent}>
-                  <div style={styles.formRow}>
-                    <div style={styles.formGroup}>
-                      <label style={styles.label}>First Name *</label>
+                <div className="checkout-section-content">
+                  <div className="checkout-form-row">
+                    <div className="checkout-form-group">
+                      <label className="checkout-label">First Name *</label>
                       <input
                         name="firstName"
+                        type="text"
+                        placeholder="Enter your first name"
                         value={formData.firstName}
                         onChange={handleChange}
-                        style={styles.input}
-                        onFocus={handleInputFocus}
-                        onBlur={handleInputBlur}
+                        className="checkout-input"
                         required
                       />
                     </div>
-                    <div style={styles.formGroup}>
-                      <label style={styles.label}>Last Name *</label>
+                    <div className="checkout-form-group">
+                      <label className="checkout-label">Last Name *</label>
                       <input
                         name="lastName"
+                        type="text"
+                        placeholder="Enter your last name"
                         value={formData.lastName}
                         onChange={handleChange}
-                        style={styles.input}
-                        onFocus={handleInputFocus}
-                        onBlur={handleInputBlur}
+                        className="checkout-input"
                         required
                       />
                     </div>
                   </div>
-                  <div style={styles.formRow}>
-                    <div style={styles.formGroup}>
-                      <label style={styles.label}>Email Address *</label>
+                  <div className="checkout-form-row">
+                    <div className="checkout-form-group">
+                      <label className="checkout-label">Email Address *</label>
                       <input
                         name="email"
                         type="email"
+                        placeholder="Enter your email"
                         value={formData.email}
                         onChange={handleChange}
-                        style={styles.input}
-                        onFocus={handleInputFocus}
-                        onBlur={handleInputBlur}
+                        className="checkout-input"
                         required
                       />
                     </div>
-                    <div style={styles.formGroup}>
-                      <label style={styles.label}>Phone Number *</label>
+                    <div className="checkout-form-group">
+                      <label className="checkout-label">Phone Number *</label>
                       <input
                         name="phone"
                         type="tel"
+                        placeholder="Enter your phone number"
                         value={formData.phone}
                         onChange={handleChange}
-                        style={styles.input}
-                        onFocus={handleInputFocus}
-                        onBlur={handleInputBlur}
+                        className="checkout-input"
                         required
                       />
                     </div>
                   </div>
-                  <div style={styles.fullWidth}>
-                    <label style={styles.label}>Address *</label>
-                    <input
-                      name="address"
-                      value={formData.address}
-                      onChange={handleChange}
-                      style={styles.input}
-                      onFocus={handleInputFocus}
-                      onBlur={handleInputBlur}
-                      required
-                    />
+                  <div className="checkout-full-width">
+                    <div className="checkout-form-group">
+                      <label className="checkout-label">Address *</label>
+                      <input
+                        name="address"
+                        type="text"
+                        placeholder="Enter your street address"
+                        value={formData.address}
+                        onChange={handleChange}
+                        className="checkout-input"
+                        required
+                      />
+                    </div>
                   </div>
-                  <div style={styles.fullWidth}>
-                    <label style={styles.label}>City *</label>
-                    <input
-                      name="city"
-                      value={formData.city}
-                      onChange={handleChange}
-                      style={styles.input}
-                      onFocus={handleInputFocus}
-                      onBlur={handleInputBlur}
-                      required
-                    />
+                  <div className="checkout-full-width">
+                    <div className="checkout-form-group">
+                      <label className="checkout-label">City *</label>
+                      <input
+                        name="city"
+                        type="text"
+                        placeholder="Enter your city"
+                        value={formData.city}
+                        onChange={handleChange}
+                        className="checkout-input"
+                        required
+                      />
+                    </div>
                   </div>
-                  <div style={styles.fullWidth}>
-                    <label style={styles.label}>Order Notes (optional)</label>
-                    <textarea
-                      name="notes"
-                      value={formData.notes}
-                      onChange={handleChange}
-                      style={styles.notesInput}
-                      onFocus={handleInputFocus}
-                      onBlur={handleInputBlur}
-                      placeholder="Any special instructions for delivery..."
-                    />
+                  <div className="checkout-full-width">
+                    <div className="checkout-form-group">
+                      <label className="checkout-label">Order Notes (optional)</label>
+                      <textarea
+                        name="notes"
+                        value={formData.notes}
+                        onChange={handleChange}
+                        className="checkout-textarea"
+                        placeholder="Any special instructions for delivery..."
+                      />
+                    </div>
                   </div>
                 </div>
               )}
             </div>
 
             {/* M-PESA Payment */}
-            <div style={styles.sectionCard}>
-              <div style={styles.sectionHeader} onClick={() => toggleSection('payment')}>
-                <span style={styles.sectionTitle}>
-                  <span style={styles.sectionNumber}>2</span> M-PESA Payment
+            <div className="checkout-section">
+              <div className="checkout-section-header" onClick={() => toggleSection('payment')}>
+                <span className="checkout-section-title">
+                  <span className="checkout-section-number">2</span> M-PESA Payment
                 </span>
                 {expandedSection === 'payment' ? <FaChevronUp /> : <FaChevronDown />}
               </div>
               {expandedSection === 'payment' && (
-                <div style={styles.sectionContent}>
-                  <div style={styles.mpesaLogoWrapper}>
+                <div className="checkout-section-content">
+                  <div className="checkout-mpesa-logo">
                     <MpesaLogo />
-                    <span style={{ fontWeight: '600', color: '#000000' }}>Pay with M-PESA</span>
+                    <span className="checkout-mpesa-label">Pay with M-PESA</span>
                   </div>
-                  <div style={styles.mpesaDetails}>
-                    <p style={styles.mpesaText}>
+                  <div className="checkout-mpesa-details">
+                    <p className="checkout-mpesa-text">
                       By typing your number and selecting the pay button, you will receive a prompt to enter your M-PESA PIN and pay the total amount.
                     </p>
-                    <div style={styles.formGroup}>
-                      <label style={styles.label}>M-PESA Phone Number</label>
+                    <div className="checkout-form-group">
+                      <label className="checkout-label">M-PESA Phone Number</label>
                       <input
                         type="tel"
-                        placeholder=""
+                        placeholder="e.g., 0712345678"
                         value={mpesaPhone}
                         onChange={(e) => setMpesaPhone(e.target.value)}
-                        style={styles.mpesaInput}
-                        onFocus={handleInputFocus}
-                        onBlur={handleInputBlur}
+                        className="checkout-mpesa-input"
                         required
                       />
                     </div>
@@ -648,21 +830,21 @@ if (
             </div>
 
             {/* Order Summary (Mobile) */}
-            <div style={styles.sectionCard}>
-              <div style={styles.sectionHeader} onClick={() => toggleSection('summary')}>
-                <span style={styles.sectionTitle}>
-                  <span style={styles.sectionNumber}>3</span> Order Summary
+            <div className="checkout-section">
+              <div className="checkout-section-header" onClick={() => toggleSection('summary')}>
+                <span className="checkout-section-title">
+                  <span className="checkout-section-number">3</span> Order Summary
                 </span>
                 {expandedSection === 'summary' ? <FaChevronUp /> : <FaChevronDown />}
               </div>
               {expandedSection === 'summary' && (
-                <div style={styles.sectionContent}>
+                <div className="checkout-section-content">
                   {cartItems.map(item => (
-                    <div key={item.id} style={styles.orderItem}>
-                      <span style={styles.orderItemName}>{item.name}</span>
+                    <div key={item.id} className="checkout-order-item">
+                      <span className="checkout-order-item-name">{item.name}</span>
                       <div>
-                        <span style={styles.orderItemQty}>x {item.quantity}</span>
-                        <span style={styles.orderItemPrice}> {formatPrice(item.price * item.quantity)}</span>
+                        <span className="checkout-order-item-qty">x {item.quantity}</span>
+                        <span className="checkout-order-item-price"> {formatPrice(item.price * item.quantity)}</span>
                       </div>
                     </div>
                   ))}
@@ -672,74 +854,63 @@ if (
           </div>
 
           {/* Order Summary - Right Sidebar */}
-          <div style={styles.orderSummary}>
-            <h3 style={styles.summaryTitle}>Order Summary</h3>
+          <div className="checkout-summary">
+            <h3 className="checkout-summary-title">Order Summary</h3>
 
             {cartItems.map(item => (
-              <div key={item.id} style={styles.orderItem}>
-                <span style={styles.orderItemName}>
-                  {item.name} <span style={styles.orderItemQty}>x {item.quantity}</span>
+              <div key={item.id} className="checkout-order-item">
+                <span className="checkout-order-item-name">
+                  {item.name} <span className="checkout-order-item-qty">x {item.quantity}</span>
                 </span>
-                <span style={styles.orderItemPrice}>{formatPrice(item.price * item.quantity)}</span>
+                <span className="checkout-order-item-price">{formatPrice(item.price * item.quantity)}</span>
               </div>
             ))}
 
-            <hr style={styles.divider} />
+            <hr className="checkout-divider" />
 
-            <div style={styles.couponSection}>
+            <div className="checkout-coupon">
               <input
                 type="text"
-                placeholder="Enter code"
+                placeholder="Enter coupon code"
                 value={couponCode}
                 onChange={(e) => setCouponCode(e.target.value)}
-                style={styles.couponInput}
-                onFocus={handleInputFocus}
-                onBlur={handleInputBlur}
+                className="checkout-coupon-input"
               />
-              <button
-                style={styles.applyButton}
-                onMouseEnter={handleApplyHover}
-                onMouseLeave={handleApplyLeave}
-              >
+              <button className="checkout-apply-btn">
                 Apply
               </button>
             </div>
 
-            <div style={styles.summaryRow}>
-              <span style={styles.summaryLabel}>Subtotal</span>
-              <span style={styles.summaryValue}>{formatPrice(subtotal)}</span>
+            <div className="checkout-summary-row">
+              <span className="checkout-summary-label">Subtotal</span>
+              <span className="checkout-summary-value">{formatPrice(subtotal)}</span>
             </div>
-            <div style={styles.summaryRow}>
-              <span style={styles.summaryLabel}>Shipping</span>
-              <span style={styles.summaryValue}>{formatPrice(shipping)}</span>
+            <div className="checkout-summary-row">
+              <span className="checkout-summary-label">Shipping</span>
+              <span className="checkout-summary-value">{formatPrice(shipping)}</span>
             </div>
             {discount > 0 && (
-              <div style={styles.summaryRow}>
-                <span style={styles.summaryLabel}>Discount</span>
-                <span style={styles.discountValue}>-{formatPrice(discount)}</span>
+              <div className="checkout-summary-row">
+                <span className="checkout-summary-label">Discount</span>
+                <span className="checkout-discount-value">-{formatPrice(discount)}</span>
               </div>
             )}
-            <div style={styles.summaryRow}>
-              <span style={styles.summaryLabel}>VAT</span>
-              <span style={styles.summaryValue}>{formatPrice(vat)}</span>
+            <div className="checkout-summary-row">
+              <span className="checkout-summary-label">VAT (8%)</span>
+              <span className="checkout-summary-value">{formatPrice(vat)}</span>
             </div>
 
-            <hr style={styles.divider} />
+            <hr className="checkout-divider" />
 
-            <div style={styles.totalRow}>
-              <span>Total</span>
-              <span style={styles.totalAmount}>{formatPrice(finalTotal)}</span>
+            <div className="checkout-total-row">
+              <span className="checkout-total-label">Total</span>
+              <span className="checkout-total-amount">{formatPrice(finalTotal)}</span>
             </div>
 
             <button
               onClick={handleSubmit}
               disabled={loading}
-              style={{
-                ...styles.payButton,
-                ...(loading ? styles.payButtonDisabled : {})
-              }}
-              onMouseEnter={handlePayHover}
-              onMouseLeave={handlePayLeave}
+              className="checkout-pay-btn"
             >
               {loading ? 'Processing...' : 'Pay ' + formatPrice(finalTotal)}
             </button>
@@ -755,7 +926,7 @@ if (
         onClose={() => setShowSuccess(false)}
         redirectPath="/orders"
       />
-    </div>
+    </>
   );
 };
 
