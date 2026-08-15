@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { FaStar, FaStarHalfAlt, FaHeart, FaShare, FaShoppingCart, FaCheck } from 'react-icons/fa';
+import { FaStar, FaStarHalfAlt, FaHeart, FaRegHeart, FaShare, FaShoppingCart, FaCheck } from 'react-icons/fa';
 import { getImageUrl } from '../utils/imageHelper';
 import { useCart } from '../context/CartContext';
+import { useAuth } from '../context/AuthContext';
 import Navbar from '../components/shared/Navbar';
 import Footer from '../components/shared/Footer';
 import api from '../api';
@@ -17,13 +18,22 @@ const ProductPage = () => {
   const [addedToCart, setAddedToCart] = useState(false);
   const [mainImage, setMainImage] = useState('/api/placeholder/600/600');
   const [imageLoaded, setImageLoaded] = useState(false);
+  const [isWishlisted, setIsWishlisted] = useState(false);
+  const [wishlistLoading, setWishlistLoading] = useState(false);
   const { addToCart } = useCart();
+  const { isAuthenticated } = useAuth();
 
   useEffect(() => {
     fetchProduct();
     // Reset image loaded state when product changes
     setImageLoaded(false);
   }, [slug]);
+
+  useEffect(() => {
+    if (isAuthenticated && product) {
+      checkWishlistStatus();
+    }
+  }, [isAuthenticated, product]);
 
   const fetchProduct = async () => {
     try {
@@ -33,14 +43,13 @@ const ProductPage = () => {
       // Filter out demo reviews and recalculate ratings
       if (productData.reviews && Array.isArray(productData.reviews)) {
         const realReviews = productData.reviews.filter(review => 
-          !review.is_demo && // If there's a flag for demo reviews
+          !review.is_demo &&
           review.rating > 0 &&
           review.rating <= 5 &&
-          review.user_id !== null && // Demo reviews might have null user_id
+          review.user_id !== null &&
           review.user_id !== undefined
         );
         
-        // Recalculate ratings based on real reviews only
         if (realReviews.length > 0) {
           const avg = realReviews.reduce((sum, r) => sum + r.rating, 0) / realReviews.length;
           productData.average_rating = Math.round(avg * 10) / 10;
@@ -50,10 +59,8 @@ const ProductPage = () => {
           productData.review_count = 0;
         }
         
-        // Replace reviews with filtered ones
         productData.reviews = realReviews;
       } else {
-        // If no reviews array exists, ensure ratings are 0
         productData.average_rating = 0;
         productData.review_count = 0;
       }
@@ -68,6 +75,53 @@ const ProductPage = () => {
       console.error('Error fetching product:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const checkWishlistStatus = async () => {
+    if (!isAuthenticated || !product) return;
+    
+    try {
+      const token = localStorage.getItem('token');
+      const response = await api.get('/api/wishlist', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const wishlistItems = response.data.map(item => item.product_id);
+      setIsWishlisted(wishlistItems.includes(product.id));
+    } catch (error) {
+      console.error('Error checking wishlist status:', error);
+    }
+  };
+
+  const toggleWishlist = async () => {
+    if (!isAuthenticated) {
+      alert('Please login to add items to wishlist');
+      return;
+    }
+
+    if (wishlistLoading) return;
+    setWishlistLoading(true);
+
+    try {
+      const token = localStorage.getItem('token');
+      if (isWishlisted) {
+        await api.delete(`/api/wishlist/${product.id}`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        setIsWishlisted(false);
+      } else {
+        await api.post('/api/wishlist', 
+          { product_id: product.id },
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+        setIsWishlisted(true);
+      }
+    } catch (error) {
+      console.error('Error toggling wishlist:', error);
+      // Revert state if API call fails
+      setIsWishlisted(!isWishlisted);
+    } finally {
+      setWishlistLoading(false);
     }
   };
 
@@ -347,6 +401,12 @@ const ProductPage = () => {
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
+      color: isWishlisted ? '#DB4444' : '#000000',
+      borderColor: isWishlisted ? '#DB4444' : '#E5E5E5',
+    },
+    wishlistButtonLoading: {
+      opacity: 0.6,
+      cursor: 'not-allowed',
     },
     productInfo: {
       borderTop: '1px solid #E5E5E5',
@@ -427,13 +487,17 @@ const ProductPage = () => {
   };
 
   const handleWishlistHover = (e) => {
-    e.target.style.borderColor = '#DB4444';
-    e.target.style.color = '#DB4444';
+    if (!isWishlisted && !wishlistLoading) {
+      e.target.style.borderColor = '#DB4444';
+      e.target.style.color = '#DB4444';
+    }
   };
 
   const handleWishlistLeave = (e) => {
-    e.target.style.borderColor = '#E5E5E5';
-    e.target.style.color = '#000000';
+    if (!isWishlisted && !wishlistLoading) {
+      e.target.style.borderColor = '#E5E5E5';
+      e.target.style.color = '#000000';
+    }
   };
 
   const handleThumbnailHover = (e) => {
@@ -447,6 +511,25 @@ const ProductPage = () => {
   // Lazy load image handler
   const handleImageLoad = () => {
     setImageLoaded(true);
+  };
+
+  // Share product function
+  const handleShare = async () => {
+    try {
+      await navigator.share({
+        title: product.name,
+        text: `Check out ${product.name} on Stara Crochet Store!`,
+        url: window.location.href,
+      });
+    } catch (error) {
+      // Fallback: copy to clipboard
+      try {
+        await navigator.clipboard.writeText(window.location.href);
+        alert('Product link copied to clipboard!');
+      } catch (err) {
+        console.error('Error sharing:', err);
+      }
+    }
   };
 
   if (loading) {
@@ -686,12 +769,17 @@ const ProductPage = () => {
                 )}
               </button>
               <button 
-                style={styles.wishlistButton}
+                style={{
+                  ...styles.wishlistButton,
+                  ...(wishlistLoading ? styles.wishlistButtonLoading : {})
+                }}
                 onMouseEnter={handleWishlistHover}
                 onMouseLeave={handleWishlistLeave}
-                aria-label="Add to wishlist"
+                onClick={toggleWishlist}
+                disabled={wishlistLoading}
+                aria-label={isWishlisted ? "Remove from wishlist" : "Add to wishlist"}
               >
-                <FaHeart />
+                {isWishlisted ? <FaHeart /> : <FaRegHeart />}
               </button>
             </div>
 
@@ -729,8 +817,9 @@ const ProductPage = () => {
               <span style={styles.shareLabel}>Share:</span>
               <button 
                 style={styles.shareButton}
-                onMouseEnter={handleWishlistHover}
-                onMouseLeave={handleWishlistLeave}
+                onMouseEnter={(e) => e.target.style.color = '#DB4444'}
+                onMouseLeave={(e) => e.target.style.color = '#666666'}
+                onClick={handleShare}
                 aria-label="Share product"
               >
                 <FaShare />
