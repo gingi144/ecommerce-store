@@ -1,5 +1,4 @@
-
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
   FaCheckCircle,
@@ -7,7 +6,6 @@ import {
   FaSpinner,
   FaArrowRight
 } from 'react-icons/fa';
-
 import Navbar from '../components/shared/Navbar';
 import Footer from '../components/shared/Footer';
 import api from '../api';
@@ -27,18 +25,15 @@ const PaymentStatus = () => {
    *
    * ?reference=ORDER-XXXXXXXX
    *
-   * We also keep a localStorage fallback in case the
-   * reference is not present in the URL.
+   * The reference is what we use to verify the payment.
    */
-  const reference =
-    searchParams.get('reference') ||
-    localStorage.getItem('payment_tracking_id');
+  const reference = searchParams.get('reference');
 
   // ============================================================
   // CHECK PAYMENT STATUS
   // ============================================================
 
-  const checkPaymentStatus = useCallback(async (paymentReference) => {
+  const checkPaymentStatus = async (paymentReference) => {
     if (!paymentReference || isChecking) {
       return;
     }
@@ -46,6 +41,11 @@ const PaymentStatus = () => {
     setIsChecking(true);
 
     try {
+      console.log(
+        'Checking payment status for reference:',
+        paymentReference
+      );
+
       const token = localStorage.getItem('token');
 
       if (!token) {
@@ -53,16 +53,23 @@ const PaymentStatus = () => {
         return;
       }
 
+      // ========================================================
+      // CHECK PAYSTACK PAYMENT STATUS
+      // ========================================================
+
       const url =
         `/api/payments/paystack/status/${encodeURIComponent(
           paymentReference
         )}`;
 
-      console.log('Checking Paystack payment status:', url);
+      console.log(
+        'Checking payment status:',
+        url
+      );
 
       const response = await api.get(url, {
         headers: {
-          Authorization: 'Bearer ' + token
+          Authorization: `Bearer ${token}`
         }
       });
 
@@ -71,11 +78,28 @@ const PaymentStatus = () => {
         response.data
       );
 
-      if (response.data?.payment) {
-        const payment = response.data.payment;
+      const payment =
+        response.data?.payment;
 
+      /*
+       * IMPORTANT:
+       *
+       * A failed Paystack payment may return:
+       *
+       * success: false
+       * payment.status: "failed"
+       *
+       * Therefore we MUST NOT only check response.data.success.
+       */
+
+      if (payment) {
         const newStatus =
           payment.status || 'pending';
+
+        console.log(
+          'Payment status:',
+          newStatus
+        );
 
         setStatus(newStatus);
 
@@ -83,19 +107,24 @@ const PaymentStatus = () => {
           setOrderId(payment.order_id);
         }
 
-        setLoading(false);
+        // ======================================================
+        // PAYMENT COMPLETED
+        // ======================================================
 
-        /*
-         * Payment completed or failed.
-         * Stop polling and clean temporary storage.
-         */
         if (
           newStatus === 'completed' ||
           newStatus === 'paid' ||
-          newStatus === 'failed'
+          newStatus === 'success'
         ) {
+          setStatus('completed');
+          setLoading(false);
+
           localStorage.removeItem(
             'payment_tracking_id'
+          );
+
+          localStorage.removeItem(
+            'order_tracking_id'
           );
 
           localStorage.removeItem(
@@ -106,6 +135,42 @@ const PaymentStatus = () => {
 
           return;
         }
+
+        // ======================================================
+        // PAYMENT FAILED
+        // ======================================================
+
+        if (
+          newStatus === 'failed' ||
+          newStatus === 'cancelled' ||
+          newStatus === 'abandoned'
+        ) {
+          setStatus('failed');
+          setLoading(false);
+
+          localStorage.removeItem(
+            'payment_tracking_id'
+          );
+
+          localStorage.removeItem(
+            'order_tracking_id'
+          );
+
+          localStorage.removeItem(
+            'pending_order_id'
+          );
+
+          setIsChecking(false);
+
+          return;
+        }
+
+        // ======================================================
+        // PAYMENT STILL PROCESSING
+        // ======================================================
+
+        setStatus('pending');
+        setLoading(false);
       }
 
     } catch (error) {
@@ -121,24 +186,33 @@ const PaymentStatus = () => {
       );
 
       /*
-       * A payment may take a few seconds to become
-       * available to the verification endpoint.
-       *
-       * Therefore, do not immediately show failure.
+       * A 404 can happen if the payment record has not
+       * appeared yet. We keep polling instead of redirecting
+       * the customer away.
        */
-      if (error.response?.status === 404) {
+
+      if (
+        error.response?.status === 404
+      ) {
         console.log(
-          'Payment not found yet. Continuing to check...'
+          'Payment not found yet, waiting for confirmation...'
         );
       }
+
+      /*
+       * Do not immediately show "failed" when the status
+       * request itself fails.
+       *
+       * The payment may still be processing.
+       */
 
     } finally {
       setIsChecking(false);
     }
-  }, [isChecking, navigate]);
+  };
 
   // ============================================================
-  // INITIAL PAYMENT CHECK + POLLING
+  // PAYMENT STATUS EFFECT
   // ============================================================
 
   useEffect(() => {
@@ -161,25 +235,19 @@ const PaymentStatus = () => {
     );
 
     /*
-     * Save it as fallback in case the page reloads.
-     */
-    localStorage.setItem(
-      'payment_tracking_id',
-      reference
-    );
-
-    /*
-     * Initial check immediately.
+     * Initial payment status check.
      */
     checkPaymentStatus(reference);
 
     /*
-     * Continue checking every 5 seconds.
+     * Keep checking every 5 seconds while the payment
+     * is still processing.
      */
     const interval = setInterval(() => {
 
       setCheckCount(
-        previous => previous + 1
+        previousCount =>
+          previousCount + 1
       );
 
       checkPaymentStatus(reference);
@@ -187,17 +255,18 @@ const PaymentStatus = () => {
     }, 5000);
 
     /*
-     * Stop after 2 minutes.
+     * Stop checking after 2 minutes.
      */
     const timeout = setTimeout(() => {
 
       clearInterval(interval);
 
-      setLoading(false);
-
       setStatus(currentStatus => {
 
-        if (currentStatus === 'pending') {
+        if (
+          currentStatus === 'pending'
+        ) {
+          setLoading(false);
           return 'timeout';
         }
 
@@ -207,24 +276,20 @@ const PaymentStatus = () => {
     }, 120000);
 
     /*
-     * Cleanup.
+     * Cleanup when leaving the page.
      */
     return () => {
-
       clearInterval(interval);
       clearTimeout(timeout);
-
     };
 
-  }, [reference, checkPaymentStatus]);
-
+  }, [reference]);
 
   // ============================================================
   // STYLES
   // ============================================================
 
   const styles = {
-
     container: {
       maxWidth: '600px',
       margin: '0 auto',
@@ -235,30 +300,38 @@ const PaymentStatus = () => {
       display: 'flex',
       flexDirection: 'column',
       alignItems: 'center',
-      justifyContent: 'center'
+      justifyContent: 'center',
     },
 
     icon: {
       fontSize: '80px',
-      marginBottom: '1.5rem'
+      marginBottom: '1.5rem',
+    },
+
+    successIcon: {
+      color: '#22C55E',
+    },
+
+    failedIcon: {
+      color: '#DC2626',
     },
 
     pendingIcon: {
-      color: '#000000'
+      color: '#000000',
     },
 
     title: {
       fontSize: '2rem',
       fontWeight: '700',
       color: '#000000',
-      marginBottom: '0.5rem'
+      marginBottom: '0.5rem',
     },
 
     subtitle: {
       fontSize: '1rem',
       color: '#666666',
       marginBottom: '1.5rem',
-      lineHeight: '1.6'
+      lineHeight: '1.6',
     },
 
     orderNumber: {
@@ -267,7 +340,7 @@ const PaymentStatus = () => {
       borderRadius: '6px',
       fontSize: '0.9rem',
       color: '#333333',
-      marginBottom: '1.5rem'
+      marginBottom: '1.5rem',
     },
 
     button: {
@@ -281,7 +354,7 @@ const PaymentStatus = () => {
       transition: 'background-color 0.3s ease',
       display: 'inline-flex',
       alignItems: 'center',
-      gap: '0.5rem'
+      gap: '0.5rem',
     },
 
     secondaryButton: {
@@ -295,7 +368,7 @@ const PaymentStatus = () => {
       transition: 'background-color 0.3s ease',
       display: 'inline-flex',
       alignItems: 'center',
-      gap: '0.5rem'
+      gap: '0.5rem',
     },
 
     buttonGroup: {
@@ -303,29 +376,28 @@ const PaymentStatus = () => {
       gap: '1rem',
       marginTop: '1rem',
       flexWrap: 'wrap',
-      justifyContent: 'center'
+      justifyContent: 'center',
     },
 
     statusText: {
       fontSize: '0.9rem',
       color: '#999999',
-      marginTop: '0.5rem'
+      marginTop: '0.5rem',
     },
 
     spinnerContainer: {
       position: 'relative',
       width: '100px',
       height: '100px',
-      marginBottom: '1.5rem'
+      marginBottom: '1.5rem',
     },
 
     spinnerOuter: {
       width: '100px',
       height: '100px',
       border: '4px solid #E5E5E5',
-      borderTop: '4px solid #000000',
       borderRadius: '50%',
-      animation: 'spin 2s linear infinite'
+      animation: 'spin 2s linear infinite',
     },
 
     spinnerInner: {
@@ -335,13 +407,13 @@ const PaymentStatus = () => {
       transform: 'translate(-50%, -50%)',
       fontSize: '1.2rem',
       color: '#999999',
-      fontWeight: '500'
+      fontWeight: '500',
     },
 
     dotPulse: {
       display: 'flex',
       gap: '0.5rem',
-      marginTop: '1rem'
+      marginTop: '1rem',
     },
 
     dot: {
@@ -349,34 +421,33 @@ const PaymentStatus = () => {
       height: '12px',
       borderRadius: '50%',
       backgroundColor: '#000000',
-      animation: 'pulse 1.5s ease-in-out infinite'
+      animation: 'pulse 1.5s ease-in-out infinite',
     },
 
     dotDelay1: {
-      animationDelay: '0s'
+      animationDelay: '0s',
     },
 
     dotDelay2: {
-      animationDelay: '0.3s'
+      animationDelay: '0.3s',
     },
 
     dotDelay3: {
-      animationDelay: '0.6s'
+      animationDelay: '0.6s',
     },
 
     checkIcon: {
       fontSize: '80px',
       color: '#22C55E',
-      animation: 'bounceIn 0.6s ease-out'
+      animation: 'bounceIn 0.6s ease-out',
     },
 
     failIcon: {
       fontSize: '80px',
       color: '#DC2626',
-      animation: 'shake 0.5s ease-in-out'
-    }
+      animation: 'shake 0.5s ease-in-out',
+    },
   };
-
 
   // ============================================================
   // ANIMATIONS
@@ -384,7 +455,8 @@ const PaymentStatus = () => {
 
   useEffect(() => {
 
-    const style = document.createElement('style');
+    const style =
+      document.createElement('style');
 
     style.textContent = `
       @keyframes spin {
@@ -458,9 +530,8 @@ const PaymentStatus = () => {
 
   }, []);
 
-
   // ============================================================
-  // LOADING
+  // LOADING / INITIAL CHECK
   // ============================================================
 
   if (loading) {
@@ -477,7 +548,7 @@ const PaymentStatus = () => {
             <div style={styles.spinnerOuter}></div>
 
             <div style={styles.spinnerInner}>
-              ⏳
+              Processing
             </div>
 
           </div>
@@ -487,8 +558,7 @@ const PaymentStatus = () => {
           </h2>
 
           <p style={styles.subtitle}>
-            Please wait while we confirm your
-            payment through Paystack...
+            Please wait while we confirm your payment.
           </p>
 
           <div style={styles.dotPulse}>
@@ -517,9 +587,7 @@ const PaymentStatus = () => {
           </div>
 
           <p style={styles.statusText}>
-            Checking payment status...
-            {' '}
-            Attempt {checkCount + 1}
+            Checking status... Attempt {checkCount + 1}
           </p>
 
         </div>
@@ -530,14 +598,14 @@ const PaymentStatus = () => {
     );
   }
 
-
   // ============================================================
-  // SUCCESS
+  // PAYMENT SUCCESSFUL
   // ============================================================
 
   if (
     status === 'completed' ||
-    status === 'paid'
+    status === 'paid' ||
+    status === 'success'
   ) {
 
     return (
@@ -552,15 +620,13 @@ const PaymentStatus = () => {
           />
 
           <h1 style={styles.title}>
-            Payment Successful!
+            Payment Successful
           </h1>
 
           <p style={styles.subtitle}>
-            Your payment has been confirmed
-            and your order has been placed
-            successfully.
-            You will receive a confirmation
-            email shortly.
+            Your payment has been confirmed and
+            your order has been placed successfully.
+            You will receive a confirmation email shortly.
           </p>
 
           {orderId && (
@@ -574,14 +640,14 @@ const PaymentStatus = () => {
             <button
               onClick={() => navigate('/orders')}
               style={styles.button}
-              onMouseEnter={(e) => {
+              onMouseEnter={(e) =>
                 e.target.style.backgroundColor =
-                  '#333333';
-              }}
-              onMouseLeave={(e) => {
+                  '#333333'
+              }
+              onMouseLeave={(e) =>
                 e.target.style.backgroundColor =
-                  '#000000';
-              }}
+                  '#000000'
+              }
             >
               View My Orders
               <FaArrowRight />
@@ -590,14 +656,14 @@ const PaymentStatus = () => {
             <button
               onClick={() => navigate('/')}
               style={styles.secondaryButton}
-              onMouseEnter={(e) => {
+              onMouseEnter={(e) =>
                 e.target.style.backgroundColor =
-                  '#E5E5E5';
-              }}
-              onMouseLeave={(e) => {
+                  '#E5E5E5'
+              }
+              onMouseLeave={(e) =>
                 e.target.style.backgroundColor =
-                  '#F5F5F5';
-              }}
+                  '#F5F5F5'
+              }
             >
               Continue Shopping
             </button>
@@ -612,9 +678,8 @@ const PaymentStatus = () => {
     );
   }
 
-
   // ============================================================
-  // FAILED
+  // PAYMENT FAILED
   // ============================================================
 
   if (status === 'failed') {
@@ -635,39 +700,62 @@ const PaymentStatus = () => {
           </h1>
 
           <p style={styles.subtitle}>
-            Your payment was not successful.
-            Please try again or use another
-            payment method.
+            Your payment could not be completed.
+            This may be due to insufficient funds,
+            a declined transaction, or another
+            payment issue. Please try again.
           </p>
+
+          {orderId && (
+            <div style={styles.orderNumber}>
+              Order # {orderId}
+            </div>
+          )}
 
           <div style={styles.buttonGroup}>
 
             <button
               onClick={() => navigate('/checkout')}
               style={styles.button}
-              onMouseEnter={(e) => {
+              onMouseEnter={(e) =>
                 e.target.style.backgroundColor =
-                  '#333333';
-              }}
-              onMouseLeave={(e) => {
+                  '#333333'
+              }
+              onMouseLeave={(e) =>
                 e.target.style.backgroundColor =
-                  '#000000';
-              }}
+                  '#000000'
+              }
             >
-              Try Again
+              Try Payment Again
+              <FaArrowRight />
+            </button>
+
+            <button
+              onClick={() => navigate('/orders')}
+              style={styles.secondaryButton}
+              onMouseEnter={(e) =>
+                e.target.style.backgroundColor =
+                  '#E5E5E5'
+              }
+              onMouseLeave={(e) =>
+                e.target.style.backgroundColor =
+                  '#F5F5F5'
+              }
+            >
+              View My Orders
             </button>
 
             <button
               onClick={() => navigate('/contact')}
               style={styles.secondaryButton}
-              onMouseEnter={(e) => {
+              onMouseEnter={(e) =>
                 e.target.style.backgroundColor =
-                  '#E5E5E5';
-              }}
-              onMouseLeave={(e) => {
+                  '#E5E5E5'
+              }
+              onMouseLeave={(e) =>
                 e.target.style.backgroundColor =
-                  '#F5F5F5';
-              }}
+                  '#F5F5F5'
+              }
             >
               Contact Support
             </button>
@@ -682,9 +770,102 @@ const PaymentStatus = () => {
     );
   }
 
+  // ============================================================
+  // PAYMENT TIMEOUT
+  // ============================================================
+
+  if (status === 'timeout') {
+
+    return (
+      <div>
+
+        <Navbar />
+
+        <div style={styles.container}>
+
+          <FaTimesCircle
+            style={styles.failIcon}
+          />
+
+          <h1 style={styles.title}>
+            Payment Confirmation Timeout
+          </h1>
+
+          <p style={styles.subtitle}>
+            We could not confirm your payment within
+            the expected time. Your payment may still
+            be processing. Please check your orders
+            before attempting another payment.
+          </p>
+
+          {orderId && (
+            <div style={styles.orderNumber}>
+              Order # {orderId}
+            </div>
+          )}
+
+          <div style={styles.buttonGroup}>
+
+            <button
+              onClick={() => navigate('/orders')}
+              style={styles.button}
+              onMouseEnter={(e) =>
+                e.target.style.backgroundColor =
+                  '#333333'
+              }
+              onMouseLeave={(e) =>
+                e.target.style.backgroundColor =
+                  '#000000'
+              }
+            >
+              View My Orders
+              <FaArrowRight />
+            </button>
+
+            <button
+              onClick={() =>
+                window.location.reload()
+              }
+              style={styles.secondaryButton}
+              onMouseEnter={(e) =>
+                e.target.style.backgroundColor =
+                  '#E5E5E5'
+              }
+              onMouseLeave={(e) =>
+                e.target.style.backgroundColor =
+                  '#F5F5F5'
+              }
+            >
+              Check Again
+            </button>
+
+            <button
+              onClick={() => navigate('/checkout')}
+              style={styles.secondaryButton}
+              onMouseEnter={(e) =>
+                e.target.style.backgroundColor =
+                  '#E5E5E5'
+              }
+              onMouseLeave={(e) =>
+                e.target.style.backgroundColor =
+                  '#F5F5F5'
+              }
+            >
+              Return to Checkout
+            </button>
+
+          </div>
+
+        </div>
+
+        <Footer />
+
+      </div>
+    );
+  }
 
   // ============================================================
-  // TIMEOUT
+  // DEFAULT / PENDING
   // ============================================================
 
   return (
@@ -694,51 +875,70 @@ const PaymentStatus = () => {
 
       <div style={styles.container}>
 
-        <FaTimesCircle
-          style={styles.failIcon}
+        <FaSpinner
+          style={{
+            ...styles.icon,
+            ...styles.pendingIcon,
+            animation:
+              'spin 1s linear infinite'
+          }}
         />
 
         <h1 style={styles.title}>
-          Payment Confirmation Timeout
+          Payment Processing
         </h1>
 
         <p style={styles.subtitle}>
-          We could not confirm your payment
-          within the expected time.
-          Please check your orders before
-          attempting the payment again.
+          Your payment is still being processed.
+          Please wait for confirmation.
+        </p>
+
+        <div style={styles.dotPulse}>
+
+          <div
+            style={{
+              ...styles.dot,
+              ...styles.dotDelay1
+            }}
+          />
+
+          <div
+            style={{
+              ...styles.dot,
+              ...styles.dotDelay2
+            }}
+          />
+
+          <div
+            style={{
+              ...styles.dot,
+              ...styles.dotDelay3
+            }}
+          />
+
+        </div>
+
+        <p style={styles.statusText}>
+          Waiting for payment confirmation...
         </p>
 
         <div style={styles.buttonGroup}>
 
           <button
-            onClick={() => navigate('/orders')}
-            style={styles.button}
-            onMouseEnter={(e) => {
-              e.target.style.backgroundColor =
-                '#333333';
-            }}
-            onMouseLeave={(e) => {
-              e.target.style.backgroundColor =
-                '#000000';
-            }}
+            onClick={() =>
+              checkPaymentStatus(reference)
+            }
+            style={styles.secondaryButton}
+            disabled={isChecking}
           >
-            View My Orders
+            Check Status Again
           </button>
 
           <button
-            onClick={() => navigate('/checkout')}
+            onClick={() => navigate('/orders')}
             style={styles.secondaryButton}
-            onMouseEnter={(e) => {
-              e.target.style.backgroundColor =
-                '#E5E5E5';
-            }}
-            onMouseLeave={(e) => {
-              e.target.style.backgroundColor =
-                '#F5F5F5';
-            }}
           >
-            Try Again
+            View My Orders
           </button>
 
         </div>
