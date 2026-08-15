@@ -4,6 +4,7 @@ import {
   FaShoppingCart, 
   FaStar, 
   FaHeart, 
+  FaRegHeart,
   FaTruck, 
   FaHeadset, 
   FaShieldAlt,
@@ -18,6 +19,7 @@ import {
 } from 'react-icons/fa';
 import { getImageUrl } from '../utils/imageHelper';
 import { useCart } from '../context/CartContext';
+import { useAuth } from '../context/AuthContext';
 import Navbar from '../components/shared/Navbar';
 import Footer from '../components/shared/Footer';
 import api from '../api';
@@ -83,7 +85,9 @@ const HomePage = () => {
   const [currentSlide, setCurrentSlide] = useState(0);
   const [countdown, setCountdown] = useState({ days: 0, hours: 0, minutes: 0, seconds: 0 });
   const [imagesLoaded, setImagesLoaded] = useState({});
+  const [wishlist, setWishlist] = useState([]);
   const { addToCart } = useCart();
+  const { isAuthenticated } = useAuth();
   
   const countdownIntervalRef = useRef(null);
   const slideIntervalRef = useRef(null);
@@ -129,6 +133,9 @@ const HomePage = () => {
   useEffect(() => {
     fetchProducts();
     fetchFlashSaleSettings();
+    if (isAuthenticated) {
+      fetchWishlist();
+    }
     
     // Preload banner images
     slides.forEach(slide => {
@@ -149,7 +156,7 @@ const HomePage = () => {
         slideIntervalRef.current = null;
       }
     };
-  }, []);
+  }, [isAuthenticated]);
 
   const fetchProducts = async () => {
     try {
@@ -200,6 +207,51 @@ const HomePage = () => {
       console.error('Error fetching products:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchWishlist = async () => {
+    if (!isAuthenticated) return;
+    
+    try {
+      const token = localStorage.getItem('token');
+      const response = await api.get('/api/wishlist', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setWishlist(response.data.map(item => item.product_id));
+    } catch (error) {
+      console.error('Error fetching wishlist:', error);
+    }
+  };
+
+  const toggleWishlist = async (productId) => {
+    if (!isAuthenticated) {
+      alert('Please login to add items to wishlist');
+      return;
+    }
+
+    try {
+      const token = localStorage.getItem('token');
+      if (wishlist.includes(productId)) {
+        await api.delete(`/api/wishlist/${productId}`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        setWishlist(prev => prev.filter(id => id !== productId));
+      } else {
+        await api.post('/api/wishlist', 
+          { product_id: productId },
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+        setWishlist(prev => [...prev, productId]);
+      }
+    } catch (error) {
+      console.error('Error toggling wishlist:', error);
+      // Revert state if API call fails
+      if (wishlist.includes(productId)) {
+        setWishlist(prev => [...prev, productId]);
+      } else {
+        setWishlist(prev => prev.filter(id => id !== productId));
+      }
     }
   };
 
@@ -1105,6 +1157,8 @@ const HomePage = () => {
                   onAddToCart={handleAddToCart}
                   discount={getDiscountPercentage(product)}
                   renderStars={renderStars}
+                  isWishlisted={wishlist.includes(product.id)}
+                  onToggleWishlist={toggleWishlist}
                 />
               ))}
             </div>
@@ -1156,6 +1210,8 @@ const HomePage = () => {
                   onAddToCart={handleAddToCart}
                   discount={getDiscountPercentage(product)}
                   renderStars={renderStars}
+                  isWishlisted={wishlist.includes(product.id)}
+                  onToggleWishlist={toggleWishlist}
                 />
               ))}
             </div>
@@ -1197,6 +1253,8 @@ const HomePage = () => {
                   onAddToCart={handleAddToCart}
                   discount={getDiscountPercentage(product)}
                   renderStars={renderStars}
+                  isWishlisted={wishlist.includes(product.id)}
+                  onToggleWishlist={toggleWishlist}
                 />
               ))}
             </div>
@@ -1323,7 +1381,15 @@ const HomePage = () => {
 };
 
 // Product Card Component with image caching and responsive styles
-const ProductCard = ({ product, formatPrice, onAddToCart, discount, renderStars }) => {
+const ProductCard = ({ 
+  product, 
+  formatPrice, 
+  onAddToCart, 
+  discount, 
+  renderStars,
+  isWishlisted = false,
+  onToggleWishlist 
+}) => {
   const imageUrl = getImageUrl(product.images?.[0]?.image_url);
   const discountPercentage = discount || 0;
 
@@ -1371,6 +1437,8 @@ const ProductCard = ({ product, formatPrice, onAddToCart, discount, renderStars 
       justifyContent: 'center',
       cursor: 'pointer',
       boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+      transition: 'all 0.3s ease',
+      zIndex: 2,
       '@media (max-width: 768px)': {
         width: '28px',
         height: '28px',
@@ -1383,6 +1451,9 @@ const ProductCard = ({ product, formatPrice, onAddToCart, discount, renderStars 
         top: '0.3rem',
         right: '0.3rem',
       },
+    },
+    wishlistBtnHover: {
+      transform: 'scale(1.1)',
     },
     discountBadge: {
       position: 'absolute',
@@ -1421,6 +1492,7 @@ const ProductCard = ({ product, formatPrice, onAddToCart, discount, renderStars 
       textDecoration: 'none',
       display: 'block',
       marginBottom: '0.25rem',
+      fontSize: '0.95rem',
       '@media (max-width: 768px)': {
         fontSize: '0.875rem',
       },
@@ -1490,6 +1562,7 @@ const ProductCard = ({ product, formatPrice, onAddToCart, discount, renderStars 
       justifyContent: 'center',
       gap: '0.5rem',
       transition: 'background-color 0.3s ease',
+      fontSize: '0.875rem',
       '@media (max-width: 768px)': {
         fontSize: '0.875rem',
         padding: '0.4rem',
@@ -1500,6 +1573,19 @@ const ProductCard = ({ product, formatPrice, onAddToCart, discount, renderStars 
         gap: '0.3rem',
       },
     },
+    addButtonHover: {
+      backgroundColor: '#B33A3A',
+    },
+  };
+
+  const [isHovered, setIsHovered] = useState(false);
+
+  const handleWishlistClick = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (onToggleWishlist) {
+      onToggleWishlist(product.id);
+    }
   };
 
   const handleAddClick = (e) => {
@@ -1509,7 +1595,11 @@ const ProductCard = ({ product, formatPrice, onAddToCart, discount, renderStars 
   };
 
   return (
-    <div style={styles.card}>
+    <div 
+      style={styles.card}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+    >
       <Link to={'/product/' + product.slug} style={{ textDecoration: 'none' }}>
         <div style={styles.imageContainer}>
           <img 
@@ -1521,7 +1611,16 @@ const ProductCard = ({ product, formatPrice, onAddToCart, discount, renderStars 
               e.target.src = '/api/placeholder/300/300';
             }}
           />
-          <button style={styles.wishlistBtn}><FaHeart /></button>
+          <button 
+            style={{
+              ...styles.wishlistBtn,
+              ...(isHovered ? styles.wishlistBtnHover : {})
+            }}
+            onClick={handleWishlistClick}
+            aria-label={isWishlisted ? "Remove from wishlist" : "Add to wishlist"}
+          >
+            {isWishlisted ? <FaHeart style={{ color: '#DB4444' }} /> : <FaRegHeart />}
+          </button>
           
           {discountPercentage > 0 && (
             <span style={styles.discountBadge}>-{discountPercentage}% OFF</span>
@@ -1552,7 +1651,12 @@ const ProductCard = ({ product, formatPrice, onAddToCart, discount, renderStars 
             <span style={styles.originalPrice}>{formatPrice(product.compare_price)}</span>
           )}
         </div>
-        <button style={styles.addButton} onClick={handleAddClick}>
+        <button 
+          style={styles.addButton}
+          onMouseEnter={(e) => e.target.style.backgroundColor = '#B33A3A'}
+          onMouseLeave={(e) => e.target.style.backgroundColor = '#DB4444'}
+          onClick={handleAddClick}
+        >
           <FaShoppingCart /> Add to Cart
         </button>
       </div>
