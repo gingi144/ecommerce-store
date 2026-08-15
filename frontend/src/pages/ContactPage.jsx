@@ -388,7 +388,7 @@ const ContactPage = () => {
                 </h3>
                 <p className="contact-info-text">We are available 24/7, 7 days a week.</p>
                 <p className="contact-info-text contact-info-text-mt">
-                  Phone: +254 700 000 000
+                  Phone: +254 799 428 420
                 </p>
               </div>
 
@@ -399,9 +399,9 @@ const ContactPage = () => {
                 </h3>
                 <p className="contact-info-text">Fill out our form and we will contact you within 24 hours.</p>
                 <p className="contact-info-text contact-info-text-mt">
-                  Emails: customer@crochetke.com
+                  Emails: sarahsila3846@gmail.com
                 </p>
-                <p className="contact-info-text">support@crochetke.com</p>
+                <p className="contact-info-text">sarahsila3846@gmail.com</p>
               </div>
 
               <div className="contact-info-card">
