@@ -17,12 +17,24 @@ const getWishlist = async (req, res) => {
         p.name,
         p.price,
         p.description,
-        p.image_url,
-        p.is_active
+        p.stock_quantity,
+        p.is_active,
+
+        COALESCE(
+          (
+            SELECT json_agg(pi ORDER BY pi.sort_order)
+            FROM product_images pi
+            WHERE pi.product_id = p.id
+          ),
+          '[]'::json
+        ) AS images
+
       FROM wishlists w
       INNER JOIN products p
         ON p.id = w.product_id
+
       WHERE w.user_id = $1
+
       ORDER BY w.created_at DESC`,
       [userId]
     );
@@ -38,6 +50,7 @@ const getWishlist = async (req, res) => {
     });
   }
 };
+
 
 // ============================================================
 // ADD PRODUCT TO WISHLIST
@@ -174,6 +187,13 @@ const checkWishlist = async (req, res) => {
     const productId =
       req.params.productId ||
       req.params.product_id;
+
+    if (!productId) {
+      return res.status(400).json({
+        success: false,
+        error: 'Product ID is required.'
+      });
+    }
 
     const result = await pool.query(
       `SELECT id
