@@ -54,7 +54,37 @@ const ShopPage = () => {
       if (filters.maxPrice) params.append('maxPrice', filters.maxPrice);
       
       const response = await api.get(`/api/products?${params}`);
-      setProducts(response.data.products || []);
+      const productsData = response.data.products || [];
+      
+      // Filter out demo reviews and recalculate ratings for each product
+      const processedProducts = productsData.map(product => {
+        if (product.reviews && Array.isArray(product.reviews)) {
+          const realReviews = product.reviews.filter(review => 
+            !review.is_demo &&
+            review.rating > 0 &&
+            review.rating <= 5 &&
+            review.user_id !== null &&
+            review.user_id !== undefined
+          );
+          
+          if (realReviews.length > 0) {
+            const avg = realReviews.reduce((sum, r) => sum + r.rating, 0) / realReviews.length;
+            product.average_rating = Math.round(avg * 10) / 10;
+            product.review_count = realReviews.length;
+          } else {
+            product.average_rating = 0;
+            product.review_count = 0;
+          }
+          
+          product.reviews = realReviews;
+        } else {
+          product.average_rating = 0;
+          product.review_count = 0;
+        }
+        return product;
+      });
+      
+      setProducts(processedProducts);
     } catch (error) {
       console.error('Error fetching products:', error);
     } finally {
@@ -132,6 +162,25 @@ const ShopPage = () => {
   };
 
   const activeFilterCount = getActiveFilterCount();
+
+  // Helper function to render star ratings
+  const renderStars = (rating) => {
+    const fullStars = Math.floor(rating);
+    const hasHalfStar = rating % 1 >= 0.5;
+    const emptyStars = 5 - fullStars - (hasHalfStar ? 1 : 0);
+    
+    return (
+      <>
+        {[...Array(fullStars)].map((_, i) => (
+          <FaStar key={`full-${i}`} size={14} />
+        ))}
+        {hasHalfStar && <FaStar key="half" size={14} style={{ color: '#FFC107' }} />}
+        {[...Array(emptyStars)].map((_, i) => (
+          <FaStar key={`empty-${i}`} size={14} style={{ color: '#E5E5E5' }} />
+        ))}
+      </>
+    );
+  };
 
   return (
     <>
@@ -471,6 +520,8 @@ const ShopPage = () => {
         }
         .shop-product-stars {
           color: #FFC107;
+          display: flex;
+          gap: 0.05rem;
         }
         .shop-product-review-count {
           font-size: 0.75rem;
@@ -1090,6 +1141,7 @@ const ShopPage = () => {
                     onToggleWishlist={toggleWishlist}
                     onAddToCart={handleAddToCart}
                     discount={getDiscountPercentage(product)}
+                    renderStars={renderStars}
                   />
                 ))}
               </div>
@@ -1104,6 +1156,7 @@ const ShopPage = () => {
                     onToggleWishlist={toggleWishlist}
                     onAddToCart={handleAddToCart}
                     discount={getDiscountPercentage(product)}
+                    renderStars={renderStars}
                   />
                 ))}
               </div>
@@ -1119,7 +1172,7 @@ const ShopPage = () => {
 // =============================================
 // Product Grid Card Component
 // =============================================
-const ProductCard = ({ product, formatPrice, isWishlisted, onToggleWishlist, onAddToCart, discount }) => {
+const ProductCard = ({ product, formatPrice, isWishlisted, onToggleWishlist, onAddToCart, discount, renderStars }) => {
   const imageUrl = getImageUrl(product.images?.[0]?.image_url);
   const discountPercentage = discount || 0;
 
@@ -1166,11 +1219,17 @@ const ProductCard = ({ product, formatPrice, isWishlisted, onToggleWishlist, onA
         </Link>
         <div className="shop-product-rating">
           <span className="shop-product-stars">
-            {[...Array(5)].map((_, i) => (
-              <FaStar key={i} size={14} />
-            ))}
+            {product.review_count > 0 ? (
+              renderStars(product.average_rating || 0)
+            ) : (
+              [...Array(5)].map((_, i) => (
+                <FaStar key={i} size={14} style={{ color: '#E5E5E5' }} />
+              ))
+            )}
           </span>
-          <span className="shop-product-review-count">(88)</span>
+          {product.review_count > 0 && (
+            <span className="shop-product-review-count">({product.review_count})</span>
+          )}
         </div>
         <div className="shop-product-price">
           <span className="shop-product-current-price">{formatPrice(product.price)}</span>
@@ -1189,7 +1248,7 @@ const ProductCard = ({ product, formatPrice, isWishlisted, onToggleWishlist, onA
 // =============================================
 // Product List Item Component
 // =============================================
-const ProductListItem = ({ product, formatPrice, isWishlisted, onToggleWishlist, onAddToCart, discount }) => {
+const ProductListItem = ({ product, formatPrice, isWishlisted, onToggleWishlist, onAddToCart, discount, renderStars }) => {
   const imageUrl = getImageUrl(product.images?.[0]?.image_url);
   const discountPercentage = discount || 0;
 
@@ -1238,11 +1297,17 @@ const ProductListItem = ({ product, formatPrice, isWishlisted, onToggleWishlist,
           <p className="shop-product-list-description">{product.description?.substring(0, 120)}...</p>
           <div className="shop-product-rating">
             <span className="shop-product-stars">
-              {[...Array(5)].map((_, i) => (
-                <FaStar key={i} size={14} />
-              ))}
+              {product.review_count > 0 ? (
+                renderStars(product.average_rating || 0)
+              ) : (
+                [...Array(5)].map((_, i) => (
+                  <FaStar key={i} size={14} style={{ color: '#E5E5E5' }} />
+                ))
+              )}
             </span>
-            <span className="shop-product-review-count">(88)</span>
+            {product.review_count > 0 && (
+              <span className="shop-product-review-count">({product.review_count})</span>
+            )}
           </div>
         </div>
         <div className="shop-product-list-bottom">

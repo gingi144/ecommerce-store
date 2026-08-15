@@ -28,11 +28,41 @@ const ProductPage = () => {
   const fetchProduct = async () => {
     try {
       const response = await api.get(`/api/products/${slug}`);
-      setProduct(response.data);
-      const firstImage = response.data.images?.[0]?.image_url || '/api/placeholder/600/600';
+      const productData = response.data;
+      
+      // Filter out demo reviews and recalculate ratings
+      if (productData.reviews && Array.isArray(productData.reviews)) {
+        const realReviews = productData.reviews.filter(review => 
+          !review.is_demo && // If there's a flag for demo reviews
+          review.rating > 0 &&
+          review.rating <= 5 &&
+          review.user_id !== null && // Demo reviews might have null user_id
+          review.user_id !== undefined
+        );
+        
+        // Recalculate ratings based on real reviews only
+        if (realReviews.length > 0) {
+          const avg = realReviews.reduce((sum, r) => sum + r.rating, 0) / realReviews.length;
+          productData.average_rating = Math.round(avg * 10) / 10;
+          productData.review_count = realReviews.length;
+        } else {
+          productData.average_rating = 0;
+          productData.review_count = 0;
+        }
+        
+        // Replace reviews with filtered ones
+        productData.reviews = realReviews;
+      } else {
+        // If no reviews array exists, ensure ratings are 0
+        productData.average_rating = 0;
+        productData.review_count = 0;
+      }
+      
+      setProduct(productData);
+      const firstImage = productData.images?.[0]?.image_url || '/api/placeholder/600/600';
       setMainImage(firstImage);
-      if (response.data.color_options?.length > 0) {
-        setSelectedColor(response.data.color_options[0]);
+      if (productData.color_options?.length > 0) {
+        setSelectedColor(productData.color_options[0]);
       }
     } catch (error) {
       console.error('Error fetching product:', error);
@@ -541,14 +571,25 @@ const ProductPage = () => {
             <h1 style={styles.productName}>{product.name}</h1>
             
             <div style={styles.ratingRow}>
-              <div style={styles.stars}>
-                {[...Array(5)].map((_, i) => (
-                  i < Math.floor(product.average_rating || 4) ? 
-                    <FaStar key={i} /> : 
-                    <FaStarHalfAlt key={i} />
-                ))}
-              </div>
-              <span style={styles.reviewCount}>({product.review_count || 0} Reviews)</span>
+              {product.review_count > 0 ? (
+                <>
+                  <div style={styles.stars}>
+                    {[...Array(5)].map((_, i) => {
+                      const rating = product.average_rating || 0;
+                      if (i < Math.floor(rating)) {
+                        return <FaStar key={i} />;
+                      } else if (i < Math.ceil(rating) && rating % 1 !== 0) {
+                        return <FaStarHalfAlt key={i} />;
+                      } else {
+                        return <FaStar key={i} style={{ color: '#E5E5E5' }} />;
+                      }
+                    })}
+                  </div>
+                  <span style={styles.reviewCount}>({product.review_count} Reviews)</span>
+                </>
+              ) : (
+                <span style={styles.reviewCount}>No reviews yet</span>
+              )}
               <span style={isInStock ? styles.inStock : styles.outOfStock}>
                 {isInStock ? 'In Stock' : 'Out of Stock'}
               </span>
