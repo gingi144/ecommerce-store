@@ -17,7 +17,6 @@ const getWishlist = async (req, res) => {
         p.name,
         p.price,
         p.description,
-        p.stock,
         p.image_url,
         p.is_active
       FROM wishlists w
@@ -39,7 +38,6 @@ const getWishlist = async (req, res) => {
     });
   }
 };
-
 
 // ============================================================
 // ADD PRODUCT TO WISHLIST
