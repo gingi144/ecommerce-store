@@ -13,6 +13,7 @@ const categoryRoutes = require('./routes/categoryRoutes');
 const paymentRoutes = require('./routes/paymentRoutes');
 const orderRoutes = require('./routes/orderRoutes');
 const reviewRoutes = require('./routes/reviewRoutes');
+const wishlistRoutes = require('./routes/wishlistRoutes');
 
 
 
@@ -119,6 +120,7 @@ app.use('/api/categories', categoryRoutes);
 app.use('/api/payments', paymentRoutes);
 app.use('/api/orders', orderRoutes);
 app.use('/api/reviews', reviewRoutes);
+app.use('/api/wishlist', wishlistRoutes);
 
 // ===========================
 // Flash Sale Routes (inline to avoid file dependency)
