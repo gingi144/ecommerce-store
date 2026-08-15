@@ -15,6 +15,7 @@ const Navbar = () => {
     e.preventDefault();
     if (searchQuery.trim()) {
       navigate(`/shop?search=${encodeURIComponent(searchQuery)}`);
+      setIsMenuOpen(false);
     }
   };
 
@@ -119,6 +120,7 @@ const Navbar = () => {
       color: '#666666',
       cursor: 'pointer',
       padding: '0.25rem',
+      transition: 'color 0.2s ease',
       '@media (max-width: 1024px)': {
         padding: '0.15rem',
       },
@@ -168,6 +170,7 @@ const Navbar = () => {
       color: '#000000',
       cursor: 'pointer',
       fontSize: '0.875rem',
+      transition: 'color 0.2s ease',
       '@media (max-width: 1024px)': {
         fontSize: '0.8rem',
         gap: '0.3rem',
@@ -200,7 +203,7 @@ const Navbar = () => {
       width: '100%',
       textAlign: 'left',
       cursor: 'pointer',
-      transition: 'background-color 0.2s ease',
+      transition: 'background-color 0.2s ease, color 0.2s ease',
       '@media (max-width: 480px)': {
         fontSize: '0.8rem',
         padding: '0.4rem 0.8rem',
@@ -246,6 +249,7 @@ const Navbar = () => {
       fontSize: '1.5rem',
       color: '#000000',
       cursor: 'pointer',
+      padding: '0.25rem',
       '@media (max-width: 768px)': {
         display: 'block',
         fontSize: '1.3rem',
@@ -288,6 +292,7 @@ const Navbar = () => {
       color: '#000000',
       textDecoration: 'none',
       fontSize: '0.875rem',
+      transition: 'color 0.2s ease',
       '@media (max-width: 480px)': {
         fontSize: '0.8rem',
         padding: '0.4rem 0',
@@ -315,6 +320,8 @@ const Navbar = () => {
       borderRadius: '4px',
       textDecoration: 'none',
       fontSize: '0.875rem',
+      transition: 'background-color 0.2s ease',
+      display: 'inline-block',
       '@media (max-width: 480px)': {
         fontSize: '0.8rem',
         padding: '0.2rem 0.8rem',
@@ -326,6 +333,8 @@ const Navbar = () => {
       color: '#DC2626',
       cursor: 'pointer',
       fontSize: '0.875rem',
+      transition: 'color 0.2s ease',
+      padding: '0.25rem 0',
       '@media (max-width: 480px)': {
         fontSize: '0.8rem',
       },
@@ -342,6 +351,7 @@ const Navbar = () => {
       display: 'flex',
       alignItems: 'center',
       gap: '0.3rem',
+      transition: 'color 0.2s ease',
       '@media (max-width: 480px)': {
         fontSize: '0.8rem',
       },
@@ -358,6 +368,14 @@ const Navbar = () => {
       justifyContent: 'center',
       fontWeight: '700',
       marginLeft: '0.25rem',
+    },
+    userInfo: {
+      fontSize: '0.8rem',
+      color: '#666',
+      padding: '0.25rem 0',
+      display: 'flex',
+      alignItems: 'center',
+      gap: '0.5rem',
     },
   };
 
@@ -383,6 +401,14 @@ const Navbar = () => {
 
   const handleLoginLeave = (e) => {
     e.target.style.backgroundColor = '#DB4444';
+  };
+
+  const handleUserButtonHover = (e) => {
+    e.currentTarget.style.color = '#DB4444';
+  };
+
+  const handleUserButtonLeave = (e) => {
+    e.currentTarget.style.color = '#000000';
   };
 
   // Get total items from cart
@@ -415,7 +441,6 @@ const Navbar = () => {
             >
               Shop
             </Link>
-           
             <Link 
               to="/about" 
               style={styles.navLink}
@@ -424,21 +449,13 @@ const Navbar = () => {
             >
               About
             </Link>
-             <Link 
+            <Link 
               to="/contact" 
               style={styles.navLink}
               onMouseEnter={handleNavLinkHover}
               onMouseLeave={handleNavLinkLeave}
             >
               Contact
-            </Link>
-            <Link 
-              to="/signup" 
-              style={styles.navLink}
-              onMouseEnter={handleNavLinkHover}
-              onMouseLeave={handleNavLinkLeave}
-            >
-              Sign Up
             </Link>
           </div>
 
@@ -452,7 +469,12 @@ const Navbar = () => {
                 onChange={(e) => setSearchQuery(e.target.value)}
                 style={styles.searchInput}
               />
-              <button type="submit" style={styles.searchButton}>
+              <button 
+                type="submit" 
+                style={styles.searchButton}
+                onMouseEnter={(e) => e.target.style.color = '#DB4444'}
+                onMouseLeave={(e) => e.target.style.color = '#666666'}
+              >
                 <FaSearch />
               </button>
             </form>
@@ -491,20 +513,30 @@ const Navbar = () => {
                   if (dropdown) dropdown.style.display = 'none';
                 }}
               >
-                <button style={styles.userButton}>
+                <button 
+                  style={styles.userButton}
+                  onMouseEnter={handleUserButtonHover}
+                  onMouseLeave={handleUserButtonLeave}
+                >
                   <FaUser size={20} />
-                  <span>{user?.first_name || user?.username}</span>
+                  <span>{user?.first_name || user?.username || 'User'}</span>
                   {isAdmin && <span style={styles.adminBadge}>Admin</span>}
                 </button>
                 <div className="dropdown" style={styles.userDropdown}>
-                  <Link to="/account" style={styles.dropdownItem}>My Account</Link>
+                  <Link to="/account" style={styles.dropdownItem} className="dropdown-item">
+                    My Account
+                  </Link>
                   {isAdmin && (
-                    <Link to="/admin" style={{...styles.dropdownItem, color: '#DB4444', fontWeight: '600'}}>
+                    <Link to="/admin" style={{...styles.dropdownItem, color: '#DB4444', fontWeight: '600'}} className="dropdown-item">
                       Admin Dashboard
                     </Link>
                   )}
                   <hr style={styles.dropdownDivider} />
-                  <button onClick={logout} style={{...styles.dropdownItem, color: '#DC2626'}}>
+                  <button 
+                    onClick={logout} 
+                    style={{...styles.dropdownItem, color: '#DC2626'}} 
+                    className="dropdown-item"
+                  >
                     Logout
                   </button>
                 </div>
@@ -543,23 +575,27 @@ const Navbar = () => {
                 onChange={(e) => setSearchQuery(e.target.value)}
                 style={styles.mobileSearchInput}
               />
-              <button type="submit" style={styles.searchButton}>
+              <button 
+                type="submit" 
+                style={styles.searchButton}
+                onMouseEnter={(e) => e.target.style.color = '#DB4444'}
+                onMouseLeave={(e) => e.target.style.color = '#666666'}
+              >
                 <FaSearch />
               </button>
             </form>
 
-            <Link to="/" style={styles.mobileLink}>Home</Link>
-            <Link to="/shop" style={styles.mobileLink}>Shop</Link>
-            <Link to="/about" style={styles.mobileLink}>About</Link>
-            <Link to="/contact" style={styles.mobileLink}>Contact</Link>
-            <Link to="/signup" style={styles.mobileLink}>Sign Up</Link>
+            <Link to="/" style={styles.mobileLink} className="mobile-link">Home</Link>
+            <Link to="/shop" style={styles.mobileLink} className="mobile-link">Shop</Link>
+            <Link to="/about" style={styles.mobileLink} className="mobile-link">About</Link>
+            <Link to="/contact" style={styles.mobileLink} className="mobile-link">Contact</Link>
             <hr style={styles.mobileDivider} />
             <div style={styles.mobileActions}>
               <div style={styles.mobileActionsRow}>
-                <Link to="/wishlist" style={styles.mobileIconLink}>
+                <Link to="/wishlist" style={styles.mobileIconLink} className="mobile-link">
                   <FaHeart size={16} /> Wishlist
                 </Link>
-                <Link to="/cart" style={styles.mobileIconLink}>
+                <Link to="/cart" style={styles.mobileIconLink} className="mobile-link">
                   <FaShoppingCart size={16} /> Cart
                   {totalItems > 0 && (
                     <span style={styles.mobileBadge}>{totalItems}</span>
@@ -568,18 +604,28 @@ const Navbar = () => {
               </div>
               {isAuthenticated ? (
                 <>
+                  <div style={styles.userInfo}>
+                    <FaUser size={14} /> Logged in as {user?.first_name || user?.username || 'User'}
+                    {isAdmin && <span style={styles.adminBadge}>Admin</span>}
+                  </div>
                   {isAdmin && (
-                    <Link to="/admin" style={{...styles.mobileLink, color: '#DB4444', fontWeight: '600'}}>
+                    <Link to="/admin" style={{...styles.mobileLink, color: '#DB4444', fontWeight: '600'}} className="mobile-link">
                       Admin Panel
                     </Link>
                   )}
-                  <button onClick={logout} style={styles.mobileLogout}>Logout</button>
-                  <div style={{...styles.mobileLink, fontSize: '0.8rem', color: '#666'}}>
-                    <FaUser size={14} /> Logged in as {user?.first_name || user?.username}
-                  </div>
+                  <button onClick={logout} style={styles.mobileLogout}>
+                    Logout
+                  </button>
                 </>
               ) : (
-                <Link to="/login" style={styles.mobileLogin}>Login</Link>
+                <Link 
+                  to="/login" 
+                  style={styles.mobileLogin}
+                  onMouseEnter={(e) => e.target.style.backgroundColor = '#B33A3A'}
+                  onMouseLeave={(e) => e.target.style.backgroundColor = '#DB4444'}
+                >
+                  Login
+                </Link>
               )}
             </div>
           </div>
