@@ -55,6 +55,25 @@ const preloadImage = (src) => {
   });
 };
 
+// Helper function to render star ratings
+const renderStars = (rating) => {
+  const fullStars = Math.floor(rating);
+  const hasHalfStar = rating % 1 >= 0.5;
+  const emptyStars = 5 - fullStars - (hasHalfStar ? 1 : 0);
+  
+  return (
+    <>
+      {[...Array(fullStars)].map((_, i) => (
+        <FaStar key={`full-${i}`} size={14} />
+      ))}
+      {hasHalfStar && <FaStar key="half" size={14} style={{ color: '#FFC107' }} />}
+      {[...Array(emptyStars)].map((_, i) => (
+        <FaStar key={`empty-${i}`} size={14} style={{ color: '#E5E5E5' }} />
+      ))}
+    </>
+  );
+};
+
 const HomePage = () => {
   const [products, setProducts] = useState([]);
   const [featured, setFeatured] = useState([]);
@@ -137,12 +156,40 @@ const HomePage = () => {
       const response = await api.get('/api/products');
       const allProducts = response.data.products || [];
       
-      setProducts(allProducts);
-      setBestSelling(allProducts.filter(p => p.is_featured) || []);
-      setFlashSales(allProducts.filter(p => p.is_on_sale) || []);
+      // Process each product to filter out demo reviews
+      const processedProducts = allProducts.map(product => {
+        if (product.reviews && Array.isArray(product.reviews)) {
+          const realReviews = product.reviews.filter(review => 
+            !review.is_demo &&
+            review.rating > 0 &&
+            review.rating <= 5 &&
+            review.user_id !== null &&
+            review.user_id !== undefined
+          );
+          
+          if (realReviews.length > 0) {
+            const avg = realReviews.reduce((sum, r) => sum + r.rating, 0) / realReviews.length;
+            product.average_rating = Math.round(avg * 10) / 10;
+            product.review_count = realReviews.length;
+          } else {
+            product.average_rating = 0;
+            product.review_count = 0;
+          }
+          
+          product.reviews = realReviews;
+        } else {
+          product.average_rating = 0;
+          product.review_count = 0;
+        }
+        return product;
+      });
+      
+      setProducts(processedProducts);
+      setBestSelling(processedProducts.filter(p => p.is_featured) || []);
+      setFlashSales(processedProducts.filter(p => p.is_on_sale) || []);
       
       // Preload product images
-      allProducts.forEach(product => {
+      processedProducts.forEach(product => {
         const imageUrl = getImageUrl(product.images?.[0]?.image_url);
         if (imageUrl) {
           preloadImage(imageUrl).catch(() => {});
@@ -1057,6 +1104,7 @@ const HomePage = () => {
                   formatPrice={formatPrice}
                   onAddToCart={handleAddToCart}
                   discount={getDiscountPercentage(product)}
+                  renderStars={renderStars}
                 />
               ))}
             </div>
@@ -1107,6 +1155,7 @@ const HomePage = () => {
                   formatPrice={formatPrice}
                   onAddToCart={handleAddToCart}
                   discount={getDiscountPercentage(product)}
+                  renderStars={renderStars}
                 />
               ))}
             </div>
@@ -1147,6 +1196,7 @@ const HomePage = () => {
                   formatPrice={formatPrice}
                   onAddToCart={handleAddToCart}
                   discount={getDiscountPercentage(product)}
+                  renderStars={renderStars}
                 />
               ))}
             </div>
@@ -1273,7 +1323,7 @@ const HomePage = () => {
 };
 
 // Product Card Component with image caching and responsive styles
-const ProductCard = ({ product, formatPrice, onAddToCart, discount }) => {
+const ProductCard = ({ product, formatPrice, onAddToCart, discount, renderStars }) => {
   const imageUrl = getImageUrl(product.images?.[0]?.image_url);
   const discountPercentage = discount || 0;
 
@@ -1389,6 +1439,8 @@ const ProductCard = ({ product, formatPrice, onAddToCart, discount }) => {
     },
     stars: {
       color: '#FFC107',
+      display: 'flex',
+      gap: '0.05rem',
       '@media (max-width: 480px)': {
         fontSize: '0.75rem',
       },
@@ -1482,11 +1534,17 @@ const ProductCard = ({ product, formatPrice, onAddToCart, discount }) => {
         </Link>
         <div style={styles.rating}>
           <span style={styles.stars}>
-            {[...Array(5)].map((_, i) => (
-              <FaStar key={i} size={14} />
-            ))}
+            {product.review_count > 0 ? (
+              renderStars(product.average_rating || 0)
+            ) : (
+              [...Array(5)].map((_, i) => (
+                <FaStar key={i} size={14} style={{ color: '#E5E5E5' }} />
+              ))
+            )}
           </span>
-          <span style={styles.reviewCount}>(88)</span>
+          {product.review_count > 0 && (
+            <span style={styles.reviewCount}>({product.review_count})</span>
+          )}
         </div>
         <div style={styles.price}>
           <span style={styles.currentPrice}>{formatPrice(product.price)}</span>
