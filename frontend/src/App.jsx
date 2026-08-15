@@ -19,6 +19,11 @@ import OrdersPage from './pages/OrdersPage';
 import OrderDetailPage from './pages/OrderDetailPage';
 import PaymentStatus from './pages/PaymentStatus';
 
+// New Legal & Support Pages
+import PrivacyPolicyPage from './pages/PrivacyPolicyPage';
+import TermsOfUsePage from './pages/TermsOfUsePage';
+import FAQPage from './pages/FAQPage';
+
 // Admin Pages
 import AdminDashboard from './pages/admin/AdminDashboard';
 import AdminProducts from './pages/admin/AdminProducts';
@@ -52,7 +57,12 @@ function App() {
             <Route path="/about" element={<AboutPage />} />
             <Route path="/contact" element={<ContactPage />} />
             
-            {/* Orders Routes - Fix the splat route issue */}
+            {/* Legal & Support Pages */}
+            <Route path="/privacy" element={<PrivacyPolicyPage />} />
+            <Route path="/terms" element={<TermsOfUsePage />} />
+            <Route path="/faq" element={<FAQPage />} />
+            
+            {/* Orders Routes */}
             <Route path="/orders" element={<OrdersPage />} />
             <Route path="/orders/:id" element={<OrderDetailPage />} />
             
@@ -64,10 +74,11 @@ function App() {
             <Route path="/admin/products/new" element={<AdminProductForm />} />
             <Route path="/admin/products/:id" element={<AdminProductForm />} />
             <Route path="/admin/orders" element={<AdminOrders />} />
-            <Route path="/admin/users" element={<AdminUsers  />}  />
-            <Route path="/admin/flash-sale" element={<AdminFlashSale />}   /> 
-            <Route path="/admin/flash-sale/new" element={<AdminFlashSaleForm />} />    
-            <Route path="/admin/categories" element={<AdminCategories />} />    
+            <Route path="/admin/users" element={<AdminUsers />} />
+            <Route path="/admin/flash-sale" element={<AdminFlashSale />} />
+            <Route path="/admin/flash-sale/new" element={<AdminFlashSaleForm />} />
+            <Route path="/admin/categories" element={<AdminCategories />} />
+            
             {/* 404 */}
             <Route path="*" element={<NotFoundPage />} />
           </Routes>
