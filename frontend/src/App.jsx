@@ -1,3 +1,4 @@
+// src/App.jsx
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { CartProvider } from './context/CartContext';
@@ -18,9 +19,9 @@ import NotFoundPage from './pages/NotFoundPage';
 import OrdersPage from './pages/OrdersPage';
 import OrderDetailPage from './pages/OrderDetailPage';
 import PaymentStatus from './pages/PaymentStatus';
-import AccountPage from './pages/AccountPage';
+import AccountPage from './pages/AccountPage'; // <-- This will look for AccountPage.jsx
 
-// New Legal & Support Pages
+// Legal & Support Pages
 import PrivacyPolicyPage from './pages/PrivacyPolicyPage';
 import TermsOfUsePage from './pages/TermsOfUsePage';
 import FAQPage from './pages/FAQPage';
@@ -59,18 +60,18 @@ function App() {
             <Route path="/contact" element={<ContactPage />} />
             <Route path="/account" element={<AccountPage />} />
             
-            // Legal & Support Pages
+            {/* Legal & Support Pages */}
             <Route path="/privacy" element={<PrivacyPolicyPage />} />
             <Route path="/terms" element={<TermsOfUsePage />} />
             <Route path="/faq" element={<FAQPage />} />
             
-            // Orders Routes
+            {/* Orders Routes */}
             <Route path="/orders" element={<OrdersPage />} />
             <Route path="/orders/:id" element={<OrderDetailPage />} />
             
             <Route path="/payment-status" element={<PaymentStatus />} />
             
-            // Admin Routes
+            {/* Admin Routes */}
             <Route path="/admin" element={<AdminDashboard />} />
             <Route path="/admin/products" element={<AdminProducts />} />
             <Route path="/admin/products/new" element={<AdminProductForm />} />
@@ -81,7 +82,7 @@ function App() {
             <Route path="/admin/flash-sale/new" element={<AdminFlashSaleForm />} />
             <Route path="/admin/categories" element={<AdminCategories />} />
             
-            // 404
+            {/* 404 */}
             <Route path="*" element={<NotFoundPage />} />
           </Routes>
         </Router>

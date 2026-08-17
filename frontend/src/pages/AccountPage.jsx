@@ -1,17 +1,16 @@
-// pages/Account.js
+// src/pages/AccountPage.jsx
 import React, { useState, useEffect } from 'react';
-import { Link, useNavigate } } from 'react-router-dom';
-import { FaUser, FaMapMarkerAlt, FaCreditCard, FaBox, FaUndo, FaTimes, FaHeart, FaEdit, FaSave, FaCamera } from 'react-icons/fa';
+import { Link, useNavigate } from 'react-router-dom';
+import { FaUser, FaMapMarkerAlt, FaBox, FaHeart, FaTimes, FaEdit, FaSave, FaTrash } from 'react-icons/fa';
 import { useAuth } from '../context/AuthContext';
-import { useCart } from '../context/CartContext';
 import Navbar from '../components/shared/Navbar';
 import Footer from '../components/shared/Footer';
+import { getImageUrl } from '../utils/imageHelper';
 import api from '../api';
 
 const AccountPage = () => {
   const navigate = useNavigate();
   const { isAuthenticated, user, logout } = useAuth();
-  const { getTotalItems } = useCart();
   
   const [activeTab, setActiveTab] = useState('profile');
   const [loading, setLoading] = useState(true);
@@ -227,6 +226,13 @@ const AccountPage = () => {
     }
   };
 
+  const handleLogout = () => {
+    if (window.confirm('Are you sure you want to logout?')) {
+      logout();
+      navigate('/');
+    }
+  };
+
   const formatPrice = (price) => {
     if (price === undefined || price === null) return 'KES 0';
     return 'KES ' + Number(price).toLocaleString();
@@ -244,7 +250,6 @@ const AccountPage = () => {
     return colors[status?.toLowerCase()] || '#6B7280';
   };
 
-  // Styles
   const styles = {
     container: {
       maxWidth: '1280px',
@@ -362,13 +367,9 @@ const AccountPage = () => {
       borderRadius: '4px',
       fontSize: '0.875rem',
       color: '#000000',
-      transition: 'border-color 0.3s ease, boxShadow 0.3s ease',
+      transition: 'border-color 0.3s ease',
       outline: 'none',
       backgroundColor: '#FFFFFF',
-    },
-    formInputFocus: {
-      borderColor: '#DB4444',
-      boxShadow: '0 0 0 3px rgba(219, 68, 68, 0.1)',
     },
     formInputDisabled: {
       backgroundColor: '#F5F5F5',
@@ -412,7 +413,6 @@ const AccountPage = () => {
       borderRadius: '8px',
       padding: '1rem',
       marginBottom: '1rem',
-      transition: 'borderColor 0.3s ease',
     },
     orderHeader: {
       display: 'flex',
@@ -587,54 +587,6 @@ const AccountPage = () => {
       textAlign: 'center',
       padding: '2rem 0',
       color: '#999999',
-    },
-    // Responsive
-    '@media (max-width: 1024px)': {
-      accountLayout: {
-        gridTemplateColumns: '240px 1fr',
-        gap: '1.5rem',
-      },
-    },
-    '@media (max-width: 768px)': {
-      accountLayout: {
-        gridTemplateColumns: '1fr',
-        gap: '1rem',
-      },
-      sidebar: {
-        position: 'relative',
-        top: '0',
-      },
-      formRow: {
-        gridTemplateColumns: '1fr',
-        gap: '0.75rem',
-      },
-      container: {
-        padding: '1rem 0.75rem',
-      },
-      content: {
-        padding: '1rem',
-      },
-      wishlistGrid: {
-        gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))',
-      },
-    },
-    '@media (max-width: 480px)': {
-      container: {
-        padding: '0.75rem 0.5rem',
-      },
-      pageTitle: {
-        fontSize: '1.25rem',
-        marginBottom: '1.5rem',
-      },
-      content: {
-        padding: '0.75rem',
-      },
-      wishlistGrid: {
-        gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))',
-      },
-      wishlistItemImage: {
-        height: '120px',
-      },
     },
   };
 
@@ -1202,12 +1154,7 @@ const AccountPage = () => {
 
             <button
               style={{...styles.sidebarItem, color: '#DC2626'}}
-              onClick={() => {
-                if (window.confirm('Are you sure you want to logout?')) {
-                  logout();
-                  navigate('/');
-                }
-              }}
+              onClick={handleLogout}
             >
               <span style={styles.sidebarIcon}><FaTimes /></span>
               Logout
