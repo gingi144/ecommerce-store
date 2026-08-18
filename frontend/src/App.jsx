@@ -19,7 +19,7 @@ import NotFoundPage from './pages/NotFoundPage';
 import OrdersPage from './pages/OrdersPage';
 import OrderDetailPage from './pages/OrderDetailPage';
 import PaymentStatus from './pages/PaymentStatus';
-import AccountPage from './pages/AccountPage'; // <-- This will look for AccountPage.jsx
+import AccountPage from './pages/AccountPage';
 
 // Legal & Support Pages
 import PrivacyPolicyPage from './pages/PrivacyPolicyPage';
@@ -32,6 +32,7 @@ import AdminProducts from './pages/admin/AdminProducts';
 import AdminProductForm from './pages/admin/AdminProductForm';
 import AdminOrders from './pages/admin/AdminOrders';
 import AdminUsers from './pages/admin/AdminUsers';
+import AdminCustomers from './pages/admin/AdminCustomers';
 import AdminFlashSale from './pages/admin/AdminFlashSale';
 import AdminFlashSaleForm from './pages/admin/AdminFlashSaleForm';
 import AdminCategories from './pages/admin/AdminCategories';
@@ -78,6 +79,7 @@ function App() {
             <Route path="/admin/products/:id" element={<AdminProductForm />} />
             <Route path="/admin/orders" element={<AdminOrders />} />
             <Route path="/admin/users" element={<AdminUsers />} />
+            <Route path="/admin/customers" element={<AdminCustomers />} />
             <Route path="/admin/flash-sale" element={<AdminFlashSale />} />
             <Route path="/admin/flash-sale/new" element={<AdminFlashSaleForm />} />
             <Route path="/admin/categories" element={<AdminCategories />} />

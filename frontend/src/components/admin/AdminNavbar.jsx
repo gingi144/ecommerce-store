@@ -1,9 +1,21 @@
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { FaHome, FaBox, FaShoppingCart, FaUsers, FaSignOutAlt, FaStore, FaBars, FaTimes } from 'react-icons/fa';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { 
+  FaHome, 
+  FaBox, 
+  FaShoppingCart, 
+  FaUsers, 
+  FaSignOutAlt, 
+  FaStore, 
+  FaBars, 
+  FaTimes,
+  FaPhoneAlt,
+  FaUserFriends
+} from 'react-icons/fa';
 
 const AdminNavbar = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const handleLogout = () => {
@@ -18,6 +30,10 @@ const AdminNavbar = () => {
 
   const closeMobileMenu = () => {
     setIsMobileMenuOpen(false);
+  };
+
+  const isActive = (path) => {
+    return location.pathname === path;
   };
 
   return (
@@ -145,6 +161,9 @@ const AdminNavbar = () => {
         .admin-mobile-link:hover {
           color: #DB4444;
         }
+        .admin-mobile-link-active {
+          color: #DB4444;
+        }
         .admin-mobile-link:last-child {
           border-bottom: none;
         }
@@ -232,17 +251,35 @@ const AdminNavbar = () => {
 
             {/* Desktop Navigation */}
             <div className="admin-nav-links">
-              <Link to="/admin" className="admin-nav-link">
+              <Link 
+                to="/admin" 
+                className={`admin-nav-link ${isActive('/admin') ? 'admin-nav-link-active' : ''}`}
+              >
                 <FaHome /> Dashboard
               </Link>
-              <Link to="/admin/products" className="admin-nav-link">
+              <Link 
+                to="/admin/products" 
+                className={`admin-nav-link ${isActive('/admin/products') ? 'admin-nav-link-active' : ''}`}
+              >
                 <FaBox /> Products
               </Link>
-              <Link to="/admin/orders" className="admin-nav-link">
+              <Link 
+                to="/admin/orders" 
+                className={`admin-nav-link ${isActive('/admin/orders') ? 'admin-nav-link-active' : ''}`}
+              >
                 <FaShoppingCart /> Orders
               </Link>
-              <Link to="/admin/users" className="admin-nav-link">
+              <Link 
+                to="/admin/users" 
+                className={`admin-nav-link ${isActive('/admin/users') ? 'admin-nav-link-active' : ''}`}
+              >
                 <FaUsers /> Users
+              </Link>
+              <Link 
+                to="/admin/customers" 
+                className={`admin-nav-link ${isActive('/admin/customers') ? 'admin-nav-link-active' : ''}`}
+              >
+                <FaUserFriends /> Customers
               </Link>
               <button onClick={handleLogout} className="admin-logout-button">
                 <FaSignOutAlt /> Logout
@@ -261,17 +298,40 @@ const AdminNavbar = () => {
 
           {/* Mobile Menu */}
           <div className={`admin-mobile-menu ${isMobileMenuOpen ? 'admin-mobile-menu-open' : ''}`}>
-            <Link to="/admin" className="admin-mobile-link" onClick={closeMobileMenu}>
+            <Link 
+              to="/admin" 
+              className={`admin-mobile-link ${isActive('/admin') ? 'admin-mobile-link-active' : ''}`}
+              onClick={closeMobileMenu}
+            >
               <FaHome className="admin-mobile-link-icon" /> Dashboard
             </Link>
-            <Link to="/admin/products" className="admin-mobile-link" onClick={closeMobileMenu}>
+            <Link 
+              to="/admin/products" 
+              className={`admin-mobile-link ${isActive('/admin/products') ? 'admin-mobile-link-active' : ''}`}
+              onClick={closeMobileMenu}
+            >
               <FaBox className="admin-mobile-link-icon" /> Products
             </Link>
-            <Link to="/admin/orders" className="admin-mobile-link" onClick={closeMobileMenu}>
+            <Link 
+              to="/admin/orders" 
+              className={`admin-mobile-link ${isActive('/admin/orders') ? 'admin-mobile-link-active' : ''}`}
+              onClick={closeMobileMenu}
+            >
               <FaShoppingCart className="admin-mobile-link-icon" /> Orders
             </Link>
-            <Link to="/admin/users" className="admin-mobile-link" onClick={closeMobileMenu}>
+            <Link 
+              to="/admin/users" 
+              className={`admin-mobile-link ${isActive('/admin/users') ? 'admin-mobile-link-active' : ''}`}
+              onClick={closeMobileMenu}
+            >
               <FaUsers className="admin-mobile-link-icon" /> Users
+            </Link>
+            <Link 
+              to="/admin/customers" 
+              className={`admin-mobile-link ${isActive('/admin/customers') ? 'admin-mobile-link-active' : ''}`}
+              onClick={closeMobileMenu}
+            >
+              <FaPhoneAlt className="admin-mobile-link-icon" /> Customers
             </Link>
             <button onClick={handleLogout} className="admin-mobile-logout">
               <FaSignOutAlt className="admin-mobile-link-icon" /> Logout
