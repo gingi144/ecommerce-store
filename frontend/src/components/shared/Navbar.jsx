@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { FaSearch, FaShoppingCart, FaUser, FaHeart, FaBars, FaTimes } from 'react-icons/fa';
+import { FaSearch, FaShoppingCart, FaUser, FaHeart, FaBars, FaTimes, FaUsers } from 'react-icons/fa';
 import { useCart } from '../../context/CartContext';
 import { useAuth } from '../../context/AuthContext';
 import api from '../../api';
@@ -40,6 +40,12 @@ const Navbar = () => {
       navigate(`/shop?search=${encodeURIComponent(searchQuery)}`);
       setIsMenuOpen(false);
     }
+  };
+
+  const handleLogout = () => {
+    logout();
+    navigate('/');
+    setIsMenuOpen(false);
   };
 
   const styles = {
@@ -554,17 +560,40 @@ const Navbar = () => {
                   <Link to="/account" style={styles.dropdownItem} className="dropdown-item">
                     My Account
                   </Link>
+                  <Link to="/orders" style={styles.dropdownItem} className="dropdown-item">
+                    Orders
+                  </Link>
                   <Link to="/wishlist" style={styles.dropdownItem} className="dropdown-item">
                     Wishlist ({wishlistCount})
                   </Link>
+                  
                   {isAdmin && (
-                    <Link to="/admin" style={{...styles.dropdownItem, color: '#DB4444', fontWeight: '600'}} className="dropdown-item">
-                      Admin Dashboard
-                    </Link>
+                    <>
+                      <hr style={styles.dropdownDivider} />
+                      <div style={{ padding: '0.25rem 1rem', fontSize: '0.75rem', color: '#999999', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                        Admin
+                      </div>
+                      <Link to="/admin" style={{...styles.dropdownItem, color: '#DB4444'}} className="dropdown-item">
+                        Dashboard
+                      </Link>
+                      <Link to="/admin/products" style={styles.dropdownItem} className="dropdown-item">
+                        Products
+                      </Link>
+                      <Link to="/admin/orders" style={styles.dropdownItem} className="dropdown-item">
+                        Orders
+                      </Link>
+                      <Link to="/admin/users" style={styles.dropdownItem} className="dropdown-item">
+                        Users
+                      </Link>
+                      <Link to="/admin/customers" style={styles.dropdownItem} className="dropdown-item">
+                        <FaUsers style={{ marginRight: '0.5rem' }} /> Customers
+                      </Link>
+                    </>
                   )}
+                  
                   <hr style={styles.dropdownDivider} />
                   <button 
-                    onClick={logout} 
+                    onClick={handleLogout} 
                     style={{...styles.dropdownItem, color: '#DC2626'}} 
                     className="dropdown-item"
                   >
@@ -616,38 +645,74 @@ const Navbar = () => {
               </button>
             </form>
 
-            <Link to="/" style={styles.mobileLink} className="mobile-link">Home</Link>
-            <Link to="/shop" style={styles.mobileLink} className="mobile-link">Shop</Link>
-            <Link to="/about" style={styles.mobileLink} className="mobile-link">About</Link>
-            <Link to="/contact" style={styles.mobileLink} className="mobile-link">Contact</Link>
+            <Link to="/" style={styles.mobileLink} className="mobile-link" onClick={() => setIsMenuOpen(false)}>
+              Home
+            </Link>
+            <Link to="/shop" style={styles.mobileLink} className="mobile-link" onClick={() => setIsMenuOpen(false)}>
+              Shop
+            </Link>
+            <Link to="/about" style={styles.mobileLink} className="mobile-link" onClick={() => setIsMenuOpen(false)}>
+              About
+            </Link>
+            <Link to="/contact" style={styles.mobileLink} className="mobile-link" onClick={() => setIsMenuOpen(false)}>
+              Contact
+            </Link>
+            
             <hr style={styles.mobileDivider} />
+            
             <div style={styles.mobileActions}>
               <div style={styles.mobileActionsRow}>
-                <Link to="/wishlist" style={styles.mobileIconLink} className="mobile-link">
+                <Link to="/wishlist" style={styles.mobileIconLink} className="mobile-link" onClick={() => setIsMenuOpen(false)}>
                   <FaHeart size={16} /> Wishlist
                   {wishlistCount > 0 && (
                     <span style={styles.mobileBadge}>{wishlistCount}</span>
                   )}
                 </Link>
-                <Link to="/cart" style={styles.mobileIconLink} className="mobile-link">
+                <Link to="/cart" style={styles.mobileIconLink} className="mobile-link" onClick={() => setIsMenuOpen(false)}>
                   <FaShoppingCart size={16} /> Cart
                   {totalItems > 0 && (
                     <span style={styles.mobileBadge}>{totalItems}</span>
                   )}
                 </Link>
               </div>
+              
               {isAuthenticated ? (
                 <>
+                  <Link to="/account" style={styles.mobileLink} className="mobile-link" onClick={() => setIsMenuOpen(false)}>
+                    <FaUser size={14} style={{ marginRight: '0.5rem' }} /> My Account
+                  </Link>
+                  <Link to="/orders" style={styles.mobileLink} className="mobile-link" onClick={() => setIsMenuOpen(false)}>
+                    Orders
+                  </Link>
+                  
+                  {isAdmin && (
+                    <>
+                      <div style={{ fontSize: '0.75rem', color: '#999999', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.05em', padding: '0.5rem 0 0.25rem' }}>
+                        Admin
+                      </div>
+                      <Link to="/admin" style={{...styles.mobileLink, color: '#DB4444'}} className="mobile-link" onClick={() => setIsMenuOpen(false)}>
+                        Dashboard
+                      </Link>
+                      <Link to="/admin/products" style={styles.mobileLink} className="mobile-link" onClick={() => setIsMenuOpen(false)}>
+                        Products
+                      </Link>
+                      <Link to="/admin/orders" style={styles.mobileLink} className="mobile-link" onClick={() => setIsMenuOpen(false)}>
+                        Orders
+                      </Link>
+                      <Link to="/admin/users" style={styles.mobileLink} className="mobile-link" onClick={() => setIsMenuOpen(false)}>
+                        Users
+                      </Link>
+                      <Link to="/admin/customers" style={styles.mobileLink} className="mobile-link" onClick={() => setIsMenuOpen(false)}>
+                        <FaUsers style={{ marginRight: '0.5rem' }} /> Customers
+                      </Link>
+                    </>
+                  )}
+                  
                   <div style={styles.userInfo}>
                     <FaUser size={14} /> Logged in as {user?.first_name || user?.username || 'User'}
                     {isAdmin && <span style={styles.adminBadge}>Admin</span>}
                   </div>
-                  {isAdmin && (
-                    <Link to="/admin" style={{...styles.mobileLink, color: '#DB4444', fontWeight: '600'}} className="mobile-link">
-                      Admin Panel
-                    </Link>
-                  )}
-                  <button onClick={logout} style={styles.mobileLogout}>
+                  <button onClick={handleLogout} style={styles.mobileLogout}>
                     Logout
                   </button>
                 </>
@@ -657,6 +722,7 @@ const Navbar = () => {
                   style={styles.mobileLogin}
                   onMouseEnter={(e) => e.target.style.backgroundColor = '#B33A3A'}
                   onMouseLeave={(e) => e.target.style.backgroundColor = '#DB4444'}
+                  onClick={() => setIsMenuOpen(false)}
                 >
                   Login
                 </Link>
