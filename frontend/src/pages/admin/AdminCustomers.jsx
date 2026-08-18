@@ -2,64 +2,79 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { 
-  FaSearch, 
-  FaPhone, 
-  FaEnvelope, 
-  FaUser, 
-  FaCalendarAlt,
-  FaFilter,
-  FaDownload,
-  FaEye,
-  FaEdit,
-  FaTrash,
-  FaPhoneAlt,
-  FaPhoneSlash,
-  FaHistory,
-  FaClock,
-  FaCheckCircle,
-  FaTimesCircle,
-  FaExclamationCircle,
-  FaUserPlus,
-  FaUserCheck,
-  FaUserClock
+  FaUsers, FaEdit, FaTrash, FaEye, 
+  FaUserCheck, FaUserTimes, FaSearch,
+  FaSortUp, FaSortDown, FaFilter,
+  FaUser, FaEnvelope, FaPhone, 
+  FaCalendarAlt, FaPhoneAlt, FaPhoneSlash,
+  FaHistory, FaClock, FaCheckCircle,
+  FaTimesCircle, FaExclamationCircle,
+  FaUserPlus, FaUserClock, FaUserFriends
 } from 'react-icons/fa';
 import { useAuth } from '../../context/AuthContext';
-import Navbar from '../../components/shared/Navbar';
-import Footer from '../../components/shared/Footer';
+import AdminLayout from '../../components/admin/AdminLayout';
 import api from '../../api';
 
 const AdminCustomers = () => {
-  const { isAdmin } = useAuth();
+  const { isAdmin, loading: authLoading } = useAuth();
   const [customers, setCustomers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
+  const [sortField, setSortField] = useState('created_at');
+  const [sortDirection, setSortDirection] = useState('desc');
   const [selectedCustomer, setSelectedCustomer] = useState(null);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [showCustomerModal, setShowCustomerModal] = useState(false);
   const [showCallModal, setShowCallModal] = useState(false);
   const [callDuration, setCallDuration] = useState(0);
-  const [callStatus, setCallStatus] = useState('idle'); // idle, calling, active, ended
+  const [callStatus, setCallStatus] = useState('idle');
   const [callHistory, setCallHistory] = useState([]);
   const [callNotes, setCallNotes] = useState('');
   const [showCallHistory, setShowCallHistory] = useState(false);
-  const [selectedCustomerId, setSelectedCustomerId] = useState(null);
+  const [stats, setStats] = useState({
+    total: 0,
+    active: 0,
+    inactive: 0,
+    newThisMonth: 0
+  });
 
   useEffect(() => {
-    if (!isAdmin) {
-      window.location.href = '/';
-      return;
+    if (!authLoading && !isAdmin) {
+      navigate('/');
     }
-    fetchCustomers();
-    fetchCallHistory();
-  }, [isAdmin]);
+    if (isAdmin) {
+      fetchCustomers();
+      fetchCallHistory();
+    }
+  }, [isAdmin, authLoading]);
 
   const fetchCustomers = async () => {
-    setLoading(true);
     try {
       const token = localStorage.getItem('token');
       const response = await api.get('/api/admin/customers', {
-        headers: { Authorization: `Bearer ${token}` }
+        headers: { Authorization: 'Bearer ' + token }
       });
-      setCustomers(response.data || []);
+      
+      const customerData = response.data || [];
+      setCustomers(customerData);
+      
+      // Calculate stats
+      const active = customerData.filter(c => c.status === 'active').length;
+      const inactive = customerData.filter(c => c.status === 'inactive' || c.status === 'blocked').length;
+      const now = new Date();
+      const thisMonth = customerData.filter(c => {
+        const created = new Date(c.created_at);
+        return created.getMonth() === now.getMonth() && 
+               created.getFullYear() === now.getFullYear();
+      }).length;
+      
+      setStats({
+        total: customerData.length,
+        active: active,
+        inactive: inactive,
+        newThisMonth: thisMonth
+      });
     } catch (error) {
       console.error('Error fetching customers:', error);
     } finally {
@@ -71,7 +86,7 @@ const AdminCustomers = () => {
     try {
       const token = localStorage.getItem('token');
       const response = await api.get('/api/admin/call-history', {
-        headers: { Authorization: `Bearer ${token}` }
+        headers: { Authorization: 'Bearer ' + token }
       });
       setCallHistory(response.data || []);
     } catch (error) {
@@ -129,26 +144,113 @@ const AdminCustomers = () => {
     }
   };
 
+  const toggleCustomerStatus = async (customerId, currentStatus) => {
+    try {
+      const token = localStorage.getItem('token');
+      const newStatus = currentStatus === 'active' ? 'inactive' : 'active';
+      await api.put(`/api/admin/customers/${customerId}/status`, 
+        { status: newStatus },
+        { headers: { Authorization: 'Bearer ' + token } }
+      );
+      fetchCustomers();
+    } catch (error) {
+      console.error('Error toggling customer status:', error);
+      alert('Failed to update customer status');
+    }
+  };
+
+  const deleteCustomer = async (customerId) => {
+    if (!window.confirm('Are you sure you want to delete this customer?')) return;
+    
+    try {
+      const token = localStorage.getItem('token');
+      await api.delete(`/api/admin/customers/${customerId}`, {
+        headers: { Authorization: 'Bearer ' + token }
+      });
+      setShowDeleteModal(false);
+      fetchCustomers();
+    } catch (error) {
+      console.error('Error deleting customer:', error);
+      alert('Failed to delete customer');
+    }
+  };
+
+  const getFilteredCustomers = () => {
+    let filtered = customers;
+    
+    // Search filter
+    if (searchTerm) {
+      const term = searchTerm.toLowerCase();
+      filtered = filtered.filter(c => 
+        c.username?.toLowerCase().includes(term) ||
+        c.email?.toLowerCase().includes(term) ||
+        c.first_name?.toLowerCase().includes(term) ||
+        c.last_name?.toLowerCase().includes(term) ||
+        c.phone?.includes(term)
+      );
+    }
+    
+    // Status filter
+    if (filterStatus !== 'all') {
+      filtered = filtered.filter(c => c.status === filterStatus);
+    }
+    
+    // Sort
+    filtered.sort((a, b) => {
+      let aVal = a[sortField] || '';
+      let bVal = b[sortField] || '';
+      
+      if (sortField === 'created_at') {
+        aVal = new Date(aVal).getTime();
+        bVal = new Date(bVal).getTime();
+      } else if (typeof aVal === 'string') {
+        aVal = aVal.toLowerCase();
+        bVal = bVal.toLowerCase();
+      }
+      
+      if (aVal < bVal) return sortDirection === 'asc' ? -1 : 1;
+      if (aVal > bVal) return sortDirection === 'asc' ? 1 : -1;
+      return 0;
+    });
+    
+    return filtered;
+  };
+
+  const filteredCustomers = getFilteredCustomers();
+
+  const handleSort = (field) => {
+    if (sortField === field) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortField(field);
+      setSortDirection('asc');
+    }
+  };
+
   const formatDate = (date) => {
     if (!date) return 'N/A';
-    return new Date(date).toLocaleDateString('en-KE', {
+    return new Date(date).toLocaleDateString('en-US', {
       year: 'numeric',
       month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
+      day: 'numeric'
     });
+  };
+
+  const getInitials = (customer) => {
+    if (customer.first_name && customer.last_name) {
+      return (customer.first_name[0] + customer.last_name[0]).toUpperCase();
+    }
+    return (customer.username?.[0] || 'C').toUpperCase();
   };
 
   const getStatusBadge = (status) => {
     const badges = {
-      'active': { color: '#10B981', icon: <FaCheckCircle />, text: 'Active' },
+      'active': { color: '#10B981', icon: <FaUserCheck />, text: 'Active' },
       'inactive': { color: '#6B7280', icon: <FaUserClock />, text: 'Inactive' },
-      'blocked': { color: '#EF4444', icon: <FaTimesCircle />, text: 'Blocked' },
+      'blocked': { color: '#EF4444', icon: <FaUserTimes />, text: 'Blocked' },
       'pending': { color: '#F59E0B', icon: <FaExclamationCircle />, text: 'Pending' }
     };
-    const badge = badges[status?.toLowerCase()] || badges['inactive'];
-    return badge;
+    return badges[status?.toLowerCase()] || badges['inactive'];
   };
 
   const getCallStatusBadge = (status) => {
@@ -161,78 +263,64 @@ const AdminCustomers = () => {
     return badges[status?.toLowerCase()] || badges['missed'];
   };
 
-  const filteredCustomers = customers.filter(customer => {
-    const matchesSearch = 
-      customer.first_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      customer.last_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      customer.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      customer.phone?.includes(searchTerm);
-    
-    const matchesStatus = filterStatus === 'all' || customer.status === filterStatus;
-    
-    return matchesSearch && matchesStatus;
-  });
-
   const styles = {
     container: {
-      maxWidth: '1400px',
+      maxWidth: '1280px',
       margin: '0 auto',
-      padding: '2rem 1rem',
-      backgroundColor: '#F8F9FA',
-      minHeight: '100vh',
+      padding: '0 1rem',
     },
     header: {
       display: 'flex',
       justifyContent: 'space-between',
       alignItems: 'center',
-      marginBottom: '2rem',
+      marginBottom: '1.5rem',
       flexWrap: 'wrap',
       gap: '1rem',
     },
-    title: {
+    pageTitle: {
       fontSize: '1.75rem',
       fontWeight: '700',
       color: '#000000',
+      margin: 0,
     },
-    titleSub: {
-      fontSize: '0.875rem',
-      color: '#666666',
-      fontWeight: '400',
-      display: 'block',
+    headerActions: {
+      display: 'flex',
+      gap: '1rem',
+      alignItems: 'center',
+      flexWrap: 'wrap',
     },
     statsGrid: {
       display: 'grid',
-      gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-      gap: '1rem',
+      gridTemplateColumns: 'repeat(4, 1fr)',
+      gap: '1.5rem',
       marginBottom: '2rem',
     },
     statCard: {
       backgroundColor: '#FFFFFF',
+      padding: '1.5rem',
       borderRadius: '8px',
-      padding: '1.25rem',
-      boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
-      border: '1px solid #E5E5E5',
-    },
-    statLabel: {
-      fontSize: '0.75rem',
-      color: '#999999',
-      textTransform: 'uppercase',
-      letterSpacing: '0.05em',
-      fontWeight: '600',
-    },
-    statValue: {
-      fontSize: '1.5rem',
-      fontWeight: '700',
-      color: '#000000',
-      marginTop: '0.25rem',
-    },
-    statChange: {
-      fontSize: '0.75rem',
-      color: '#10B981',
-      marginTop: '0.25rem',
+      boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
       display: 'flex',
       alignItems: 'center',
-      gap: '0.25rem',
+      gap: '1rem',
+    },
+    statIcon: {
+      fontSize: '2rem',
+      color: '#DB4444',
+      opacity: 0.7,
+    },
+    statContent: {
+      display: 'flex',
+      flexDirection: 'column',
+    },
+    statNumber: {
+      fontSize: '1.75rem',
+      fontWeight: '700',
+      color: '#000000',
+    },
+    statLabel: {
+      fontSize: '0.875rem',
+      color: '#666666',
     },
     toolbar: {
       display: 'flex',
@@ -241,46 +329,66 @@ const AdminCustomers = () => {
       marginBottom: '1.5rem',
       flexWrap: 'wrap',
       gap: '1rem',
-      backgroundColor: '#FFFFFF',
-      padding: '1rem',
-      borderRadius: '8px',
-      border: '1px solid #E5E5E5',
     },
-    searchContainer: {
+    searchWrapper: {
       display: 'flex',
       alignItems: 'center',
-      gap: '0.5rem',
-      flex: '1',
-      maxWidth: '400px',
+      backgroundColor: '#FFFFFF',
+      border: '1px solid #E5E5E5',
+      borderRadius: '6px',
+      padding: '0.25rem 0.75rem',
+      transition: 'border-color 0.3s ease, box-shadow 0.3s ease',
     },
     searchInput: {
-      flex: 1,
-      padding: '0.5rem 0.75rem',
+      border: 'none',
+      outline: 'none',
+      padding: '0.5rem',
+      fontSize: '0.875rem',
+      width: '200px',
+      backgroundColor: 'transparent',
+      color: '#000000',
+    },
+    searchIcon: {
+      color: '#999999',
+    },
+    filterWrapper: {
+      display: 'flex',
+      gap: '1rem',
+      alignItems: 'center',
+    },
+    filterIcon: {
+      color: '#999999',
+    },
+    filterSelect: {
+      padding: '0.5rem 1rem',
       border: '1px solid #E5E5E5',
-      borderRadius: '4px',
+      borderRadius: '6px',
       fontSize: '0.875rem',
       outline: 'none',
-      transition: 'border-color 0.3s ease',
+      backgroundColor: '#FFFFFF',
+      color: '#000000',
+      cursor: 'pointer',
     },
-    filterContainer: {
+    refreshButton: {
+      backgroundColor: '#F3F4F6',
+      color: '#000000',
+      padding: '0.5rem 1rem',
+      borderRadius: '6px',
+      border: '1px solid #E5E5E5',
+      cursor: 'pointer',
+      fontSize: '0.875rem',
       display: 'flex',
       alignItems: 'center',
       gap: '0.5rem',
+      transition: 'background-color 0.3s ease',
     },
-    filterSelect: {
-      padding: '0.5rem 0.75rem',
-      border: '1px solid #E5E5E5',
-      borderRadius: '4px',
-      fontSize: '0.875rem',
-      backgroundColor: '#FFFFFF',
-      outline: 'none',
-      cursor: 'pointer',
-    },
-    tableContainer: {
+    tableCard: {
       backgroundColor: '#FFFFFF',
       borderRadius: '8px',
+      boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
       overflow: 'hidden',
-      border: '1px solid #E5E5E5',
+    },
+    tableWrapper: {
       overflowX: 'auto',
     },
     table: {
@@ -288,31 +396,72 @@ const AdminCustomers = () => {
       borderCollapse: 'collapse',
     },
     th: {
-      padding: '0.75rem 1rem',
+      padding: '0.75rem 1.5rem',
       textAlign: 'left',
-      backgroundColor: '#F8F9FA',
-      borderBottom: '2px solid #E5E5E5',
-      fontWeight: '600',
-      color: '#000000',
       fontSize: '0.75rem',
+      fontWeight: '600',
+      color: '#666666',
       textTransform: 'uppercase',
       letterSpacing: '0.05em',
+      borderBottom: '2px solid #E5E5E5',
+      backgroundColor: '#FAFAFA',
+      cursor: 'pointer',
+      whiteSpace: 'nowrap',
+    },
+    thContent: {
+      display: 'flex',
+      alignItems: 'center',
+      gap: '0.25rem',
+    },
+    tr: {
+      borderBottom: '1px solid #F0F0F0',
+      transition: 'background-color 0.2s ease',
     },
     td: {
-      padding: '0.75rem 1rem',
-      borderBottom: '1px solid #F5F5F5',
+      padding: '0.75rem 1.5rem',
       fontSize: '0.875rem',
-      color: '#333333',
+      color: '#000000',
       verticalAlign: 'middle',
     },
+    customerCell: {
+      display: 'flex',
+      alignItems: 'center',
+      gap: '0.75rem',
+    },
+    customerAvatar: {
+      width: '40px',
+      height: '40px',
+      borderRadius: '50%',
+      backgroundColor: '#DB4444',
+      color: '#FFFFFF',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      fontSize: '1rem',
+      fontWeight: '600',
+      flexShrink: 0,
+    },
+    customerName: {
+      fontWeight: '500',
+      color: '#000000',
+    },
+    customerEmail: {
+      fontSize: '0.8rem',
+      color: '#666666',
+    },
     statusBadge: {
+      padding: '0.2rem 0.6rem',
+      borderRadius: '4px',
+      fontSize: '0.7rem',
+      fontWeight: '600',
       display: 'inline-flex',
       alignItems: 'center',
       gap: '0.25rem',
-      padding: '0.25rem 0.5rem',
-      borderRadius: '4px',
-      fontSize: '0.75rem',
-      fontWeight: '600',
+    },
+    actionButtons: {
+      display: 'flex',
+      gap: '0.5rem',
+      flexWrap: 'wrap',
     },
     actionButton: {
       padding: '0.25rem 0.5rem',
@@ -324,35 +473,40 @@ const AdminCustomers = () => {
       display: 'inline-flex',
       alignItems: 'center',
       gap: '0.25rem',
-      marginRight: '0.25rem',
     },
-    phoneButton: {
+    actionView: {
+      backgroundColor: '#8B5CF6',
+      color: '#FFFFFF',
+    },
+    actionCall: {
       backgroundColor: '#10B981',
       color: '#FFFFFF',
     },
-    phoneButtonHover: {
-      backgroundColor: '#059669',
-    },
-    viewButton: {
-      backgroundColor: '#3B82F6',
-      color: '#FFFFFF',
-    },
-    viewButtonHover: {
-      backgroundColor: '#2563EB',
-    },
-    editButton: {
+    actionStatus: {
       backgroundColor: '#F59E0B',
       color: '#FFFFFF',
     },
-    editButtonHover: {
-      backgroundColor: '#D97706',
-    },
-    deleteButton: {
-      backgroundColor: '#EF4444',
+    actionDelete: {
+      backgroundColor: '#DC2626',
       color: '#FFFFFF',
     },
-    deleteButtonHover: {
-      backgroundColor: '#DC2626',
+    emptyState: {
+      textAlign: 'center',
+      padding: '3rem 0',
+    },
+    emptyIcon: {
+      fontSize: '3rem',
+      color: '#E5E5E5',
+      marginBottom: '1rem',
+    },
+    emptyTitle: {
+      fontSize: '1.25rem',
+      fontWeight: '600',
+      color: '#000000',
+      marginBottom: '0.5rem',
+    },
+    emptyText: {
+      color: '#666666',
     },
     modalOverlay: {
       position: 'fixed',
@@ -372,27 +526,59 @@ const AdminCustomers = () => {
       padding: '2rem',
       maxWidth: '500px',
       width: '90%',
-      maxHeight: '90vh',
-      overflowY: 'auto',
-    },
-    modalHeader: {
-      display: 'flex',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-      marginBottom: '1.5rem',
+      maxHeight: '80vh',
+      overflow: 'auto',
     },
     modalTitle: {
       fontSize: '1.25rem',
       fontWeight: '700',
       color: '#000000',
+      marginBottom: '1rem',
     },
-    modalClose: {
-      background: 'none',
+    modalBody: {
+      marginBottom: '1.5rem',
+    },
+    modalFooter: {
+      display: 'flex',
+      gap: '1rem',
+      justifyContent: 'flex-end',
+    },
+    modalButton: {
+      padding: '0.5rem 1.5rem',
+      borderRadius: '6px',
       border: 'none',
-      fontSize: '1.5rem',
       cursor: 'pointer',
-      color: '#999999',
-      padding: '0.25rem',
+      fontSize: '0.95rem',
+      transition: 'background-color 0.3s ease',
+    },
+    modalButtonDanger: {
+      backgroundColor: '#DC2626',
+      color: '#FFFFFF',
+    },
+    modalButtonSecondary: {
+      backgroundColor: '#F3F4F6',
+      color: '#000000',
+      border: '1px solid #E5E5E5',
+    },
+    modalButtonPrimary: {
+      backgroundColor: '#DB4444',
+      color: '#FFFFFF',
+    },
+    loadingContainer: {
+      textAlign: 'center',
+      padding: '4rem 0',
+    },
+    spinner: {
+      display: 'inline-block',
+      width: '40px',
+      height: '40px',
+      border: '4px solid #E5E5E5',
+      borderTop: '4px solid #DB4444',
+      borderRadius: '50%',
+      animation: 'spin 1s linear infinite',
+    },
+    callModal: {
+      maxWidth: '500px',
     },
     callDisplay: {
       textAlign: 'center',
@@ -453,17 +639,9 @@ const AdminCustomers = () => {
       backgroundColor: '#EF4444',
       color: '#FFFFFF',
     },
-    callButtonEndHover: {
-      backgroundColor: '#DC2626',
-      transform: 'scale(1.05)',
-    },
     callButtonCall: {
       backgroundColor: '#10B981',
       color: '#FFFFFF',
-    },
-    callButtonCallHover: {
-      backgroundColor: '#059669',
-      transform: 'scale(1.05)',
     },
     callNotes: {
       marginTop: '1.5rem',
@@ -478,18 +656,12 @@ const AdminCustomers = () => {
       resize: 'vertical',
       outline: 'none',
     },
-    loadingText: {
-      textAlign: 'center',
-      padding: '2rem 0',
-      color: '#999999',
-    },
-    noDataText: {
-      textAlign: 'center',
-      padding: '2rem 0',
-      color: '#999999',
-    },
-    callHistoryList: {
-      marginTop: '1rem',
+    callHistorySection: {
+      backgroundColor: '#FFFFFF',
+      padding: '1.5rem',
+      borderRadius: '8px',
+      boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
+      marginBottom: '2rem',
     },
     callHistoryItem: {
       display: 'flex',
@@ -498,58 +670,82 @@ const AdminCustomers = () => {
       padding: '0.5rem 0',
       borderBottom: '1px solid #F5F5F5',
     },
-    customerName: {
-      fontWeight: '600',
+    callHistoryName: {
+      fontWeight: '500',
       color: '#000000',
     },
-    customerEmail: {
-      fontSize: '0.75rem',
-      color: '#999999',
-    },
-    customerPhone: {
-      fontSize: '0.875rem',
-      color: '#000000',
+    callHistoryPhone: {
+      fontSize: '0.8rem',
+      color: '#666666',
     },
   };
 
-  if (!isAdmin) {
-    return null;
+  const handleSearchFocus = (e) => {
+    e.currentTarget.parentElement.style.borderColor = '#DB4444';
+    e.currentTarget.parentElement.style.boxShadow = '0 0 0 3px rgba(219, 68, 68, 0.1)';
+  };
+
+  const handleSearchBlur = (e) => {
+    e.currentTarget.parentElement.style.borderColor = '#E5E5E5';
+    e.currentTarget.parentElement.style.boxShadow = 'none';
+  };
+
+  const handleRowHover = (e) => {
+    e.currentTarget.style.backgroundColor = '#FAFAFA';
+  };
+
+  const handleRowLeave = (e) => {
+    e.currentTarget.style.backgroundColor = 'transparent';
+  };
+
+  const handleActionHover = (e) => {
+    e.currentTarget.style.transform = 'scale(1.05)';
+  };
+
+  const handleActionLeave = (e) => {
+    e.currentTarget.style.transform = 'scale(1)';
+  };
+
+  const handleRefresh = () => {
+    setLoading(true);
+    fetchCustomers();
+    fetchCallHistory();
+  };
+
+  if (authLoading || loading) {
+    return (
+      <AdminLayout>
+        <div style={styles.loadingContainer}>
+          <div style={styles.spinner}></div>
+          <p style={{ marginTop: '1rem', color: '#666666' }}>Loading customers...</p>
+        </div>
+        <style>{`
+          @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+          }
+        `}</style>
+      </AdminLayout>
+    );
   }
 
-  // Calculate stats
-  const totalCustomers = customers.length;
-  const activeCustomers = customers.filter(c => c.status === 'active').length;
-  const newCustomers = customers.filter(c => {
-    const joined = new Date(c.created_at);
-    const now = new Date();
-    const diffTime = Math.abs(now - joined);
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    return diffDays <= 30;
-  }).length;
-
   return (
-    <div>
-      <Navbar />
+    <AdminLayout>
       <div style={styles.container}>
         <div style={styles.header}>
-          <div>
-            <h1 style={styles.title}>
-              Customer Management
-              <span style={styles.titleSub}>Manage and call your customers</span>
-            </h1>
-          </div>
-          <div style={{ display: 'flex', gap: '0.5rem' }}>
+          <h1 style={styles.pageTitle}>Customers</h1>
+          <div style={styles.headerActions}>
             <button 
-              style={{...styles.actionButton, ...styles.phoneButton, padding: '0.5rem 1rem'}}
+              style={styles.refreshButton}
+              onClick={handleRefresh}
+            >
+              <FaUserFriends /> Refresh
+            </button>
+            <button 
+              style={{...styles.refreshButton, backgroundColor: '#10B981', color: '#FFFFFF', borderColor: '#10B981'}}
               onClick={() => setShowCallHistory(!showCallHistory)}
             >
               <FaHistory /> Call History
-            </button>
-            <button 
-              style={{...styles.actionButton, ...styles.editButton, padding: '0.5rem 1rem'}}
-              onClick={() => {/* Export functionality */}}
-            >
-              <FaDownload /> Export
             </button>
           </div>
         </div>
@@ -557,55 +753,105 @@ const AdminCustomers = () => {
         {/* Stats */}
         <div style={styles.statsGrid}>
           <div style={styles.statCard}>
-            <div style={styles.statLabel}>Total Customers</div>
-            <div style={styles.statValue}>{totalCustomers}</div>
-            <div style={styles.statChange}>
-              <FaUser /> All registered users
+            <FaUserFriends style={styles.statIcon} />
+            <div style={styles.statContent}>
+              <span style={styles.statNumber}>{stats.total}</span>
+              <span style={styles.statLabel}>Total Customers</span>
             </div>
           </div>
           <div style={styles.statCard}>
-            <div style={styles.statLabel}>Active Customers</div>
-            <div style={styles.statValue}>{activeCustomers}</div>
-            <div style={{...styles.statChange, color: '#10B981'}}>
-              <FaUserCheck /> Active accounts
+            <FaUserCheck style={styles.statIcon} />
+            <div style={styles.statContent}>
+              <span style={styles.statNumber}>{stats.active}</span>
+              <span style={styles.statLabel}>Active</span>
             </div>
           </div>
           <div style={styles.statCard}>
-            <div style={styles.statLabel}>New Customers (30 days)</div>
-            <div style={styles.statValue}>{newCustomers}</div>
-            <div style={{...styles.statChange, color: '#3B82F6'}}>
-              <FaUserPlus /> New signups
+            <FaUserTimes style={styles.statIcon} />
+            <div style={styles.statContent}>
+              <span style={styles.statNumber}>{stats.inactive}</span>
+              <span style={styles.statLabel}>Inactive</span>
             </div>
           </div>
           <div style={styles.statCard}>
-            <div style={styles.statLabel}>Total Calls Made</div>
-            <div style={styles.statValue}>{callHistory.length}</div>
-            <div style={{...styles.statChange, color: '#8B5CF6'}}>
-              <FaPhoneAlt /> Call history
+            <FaCalendarAlt style={styles.statIcon} />
+            <div style={styles.statContent}>
+              <span style={styles.statNumber}>{stats.newThisMonth}</span>
+              <span style={styles.statLabel}>New This Month</span>
             </div>
           </div>
         </div>
 
+        {/* Call History Section */}
+        {showCallHistory && (
+          <div style={styles.callHistorySection}>
+            <h3 style={{ fontSize: '1rem', fontWeight: '600', marginBottom: '1rem' }}>
+              <FaHistory /> Recent Call History
+            </h3>
+            {callHistory.length === 0 ? (
+              <div style={styles.emptyState}>
+                <p style={styles.emptyText}>No call history available</p>
+              </div>
+            ) : (
+              callHistory.slice(0, 10).map((call, index) => {
+                const statusBadge = getCallStatusBadge(call.status);
+                return (
+                  <div key={index} style={styles.callHistoryItem}>
+                    <div>
+                      <div style={styles.callHistoryName}>
+                        {call.customer_name || 'Unknown Customer'}
+                      </div>
+                      <div style={styles.callHistoryPhone}>
+                        <FaPhone style={{ marginRight: '0.25rem' }} />
+                        {call.customer_phone || 'No phone'}
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      <span style={{
+                        ...styles.statusBadge,
+                        backgroundColor: statusBadge.color + '20',
+                        color: statusBadge.color,
+                      }}>
+                        {statusBadge.text}
+                      </span>
+                      {call.duration && (
+                        <span style={{ fontSize: '0.75rem', color: '#999999' }}>
+                          {call.duration}s
+                        </span>
+                      )}
+                      <span style={{ fontSize: '0.75rem', color: '#999999' }}>
+                        {formatDate(call.created_at)}
+                      </span>
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
+        )}
+
         {/* Toolbar */}
         <div style={styles.toolbar}>
-          <div style={styles.searchContainer}>
-            <FaSearch style={{ color: '#999999' }} />
+          <div style={styles.searchWrapper}>
+            <FaSearch style={styles.searchIcon} />
             <input
               type="text"
-              placeholder="Search by name, email, or phone..."
+              placeholder="Search customers by name, email, or phone..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               style={styles.searchInput}
+              onFocus={handleSearchFocus}
+              onBlur={handleSearchBlur}
             />
           </div>
-          <div style={styles.filterContainer}>
-            <FaFilter style={{ color: '#999999' }} />
+          <div style={styles.filterWrapper}>
+            <FaFilter style={styles.filterIcon} />
             <select
               value={filterStatus}
               onChange={(e) => setFilterStatus(e.target.value)}
               style={styles.filterSelect}
             >
-              <option value="all">All Status</option>
+              <option value="all">All Customers</option>
               <option value="active">Active</option>
               <option value="inactive">Inactive</option>
               <option value="blocked">Blocked</option>
@@ -614,118 +860,91 @@ const AdminCustomers = () => {
           </div>
         </div>
 
-        {/* Call History Section */}
-        {showCallHistory && (
-          <div style={{...styles.statCard, marginBottom: '1.5rem'}}>
-            <h3 style={{ fontSize: '1rem', fontWeight: '600', marginBottom: '1rem' }}>
-              <FaHistory /> Recent Call History
-            </h3>
-            {callHistory.length === 0 ? (
-              <div style={styles.noDataText}>No call history available</div>
-            ) : (
-              <div style={styles.callHistoryList}>
-                {callHistory.slice(0, 10).map((call, index) => {
-                  const statusBadge = getCallStatusBadge(call.status);
-                  return (
-                    <div key={index} style={styles.callHistoryItem}>
-                      <div>
-                        <div style={styles.customerName}>
-                          {call.customer_name || 'Unknown Customer'}
-                        </div>
-                        <div style={styles.customerEmail}>{call.customer_phone || 'No phone'}</div>
-                      </div>
-                      <div>
-                        <span style={{
-                          ...styles.statusBadge,
-                          backgroundColor: statusBadge.color + '20',
-                          color: statusBadge.color,
-                        }}>
-                          {statusBadge.text}
-                        </span>
-                        <span style={{ fontSize: '0.75rem', color: '#999999', marginLeft: '0.5rem' }}>
-                          {call.duration ? `${call.duration}s` : ''}
-                        </span>
-                        <span style={{ fontSize: '0.75rem', color: '#999999', marginLeft: '0.5rem' }}>
-                          {formatDate(call.created_at)}
-                        </span>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Customer Table */}
-        <div style={styles.tableContainer}>
-          {loading ? (
-            <div style={styles.loadingText}>Loading customers...</div>
-          ) : filteredCustomers.length === 0 ? (
-            <div style={styles.noDataText}>No customers found</div>
-          ) : (
+        {/* Customers Table */}
+        <div style={styles.tableCard}>
+          <div style={styles.tableWrapper}>
             <table style={styles.table}>
               <thead>
                 <tr>
-                  <th style={styles.th}>Customer</th>
-                  <th style={styles.th}>Contact</th>
-                  <th style={styles.th}>Joined</th>
-                  <th style={styles.th}>Orders</th>
-                  <th style={styles.th}>Status</th>
+                  <th style={styles.th} onClick={() => handleSort('first_name')}>
+                    <div style={styles.thContent}>
+                      Customer
+                      {sortField === 'first_name' && (
+                        sortDirection === 'asc' ? <FaSortUp /> : <FaSortDown />
+                      )}
+                    </div>
+                  </th>
+                  <th style={styles.th} onClick={() => handleSort('email')}>
+                    <div style={styles.thContent}>
+                      Email
+                      {sortField === 'email' && (
+                        sortDirection === 'asc' ? <FaSortUp /> : <FaSortDown />
+                      )}
+                    </div>
+                  </th>
+                  <th style={styles.th} onClick={() => handleSort('phone')}>
+                    <div style={styles.thContent}>
+                      Phone
+                      {sortField === 'phone' && (
+                        sortDirection === 'asc' ? <FaSortUp /> : <FaSortDown />
+                      )}
+                    </div>
+                  </th>
+                  <th style={styles.th} onClick={() => handleSort('status')}>
+                    <div style={styles.thContent}>
+                      Status
+                      {sortField === 'status' && (
+                        sortDirection === 'asc' ? <FaSortUp /> : <FaSortDown />
+                      )}
+                    </div>
+                  </th>
+                  <th style={styles.th} onClick={() => handleSort('created_at')}>
+                    <div style={styles.thContent}>
+                      Joined
+                      {sortField === 'created_at' && (
+                        sortDirection === 'asc' ? <FaSortUp /> : <FaSortDown />
+                      )}
+                    </div>
+                  </th>
                   <th style={styles.th}>Actions</th>
                 </tr>
               </thead>
               <tbody>
-                {filteredCustomers.map((customer) => {
+                {filteredCustomers.map(customer => {
                   const statusBadge = getStatusBadge(customer.status);
                   return (
-                    <tr key={customer.id}>
+                    <tr 
+                      key={customer.id} 
+                      style={styles.tr}
+                      onMouseEnter={handleRowHover}
+                      onMouseLeave={handleRowLeave}
+                    >
                       <td style={styles.td}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                          <div style={{
-                            width: '32px',
-                            height: '32px',
-                            borderRadius: '50%',
-                            backgroundColor: '#F5F5F5',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            fontSize: '0.875rem',
-                            fontWeight: '600',
-                            color: '#666666',
-                          }}>
-                            {(customer.first_name?.[0] || customer.email?.[0] || 'U').toUpperCase()}
+                        <div style={styles.customerCell}>
+                          <div style={styles.customerAvatar}>
+                            {getInitials(customer)}
                           </div>
                           <div>
-                            <div style={{ fontWeight: '500', color: '#000000' }}>
-                              {customer.first_name} {customer.last_name}
+                            <div style={styles.customerName}>
+                              {customer.first_name || ''} {customer.last_name || ''}
                             </div>
-                            <div style={{ fontSize: '0.75rem', color: '#999999' }}>
-                              @{customer.username || 'user'}
+                            <div style={styles.customerEmail}>
+                              @{customer.username}
                             </div>
                           </div>
                         </div>
                       </td>
                       <td style={styles.td}>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
-                          <div style={{ fontSize: '0.875rem', color: '#000000' }}>
-                            {customer.phone || 'No phone'}
-                          </div>
-                          <div style={{ fontSize: '0.75rem', color: '#999999' }}>
-                            <FaEnvelope style={{ marginRight: '0.25rem' }} />
-                            {customer.email}
-                          </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                          <FaEnvelope size={14} color="#999" />
+                          {customer.email}
                         </div>
                       </td>
                       <td style={styles.td}>
-                        <div style={{ fontSize: '0.875rem' }}>
-                          {formatDate(customer.created_at)}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                          <FaPhone size={14} color="#999" />
+                          {customer.phone || 'N/A'}
                         </div>
-                      </td>
-                      <td style={styles.td}>
-                        <span style={{ fontWeight: '600', color: '#000000' }}>
-                          {customer.order_count || 0}
-                        </span>
                       </td>
                       <td style={styles.td}>
                         <span style={{
@@ -737,33 +956,54 @@ const AdminCustomers = () => {
                         </span>
                       </td>
                       <td style={styles.td}>
-                        <div style={{ display: 'flex', gap: '0.25rem', flexWrap: 'wrap' }}>
-                          <button
-                            style={{...styles.actionButton, ...styles.phoneButton}}
-                            onMouseEnter={(e) => e.target.style.backgroundColor = '#059669'}
-                            onMouseLeave={(e) => e.target.style.backgroundColor = '#10B981'}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                          <FaCalendarAlt size={14} color="#999" />
+                          {formatDate(customer.created_at)}
+                        </div>
+                      </td>
+                      <td style={styles.td}>
+                        <div style={styles.actionButtons}>
+                          <button 
+                            style={{ ...styles.actionButton, ...styles.actionCall }}
                             onClick={() => handleCall(customer)}
                             title="Call Customer"
+                            onMouseEnter={handleActionHover}
+                            onMouseLeave={handleActionLeave}
                           >
-                            <FaPhone /> Call
+                            <FaPhoneAlt /> Call
                           </button>
-                          <button
-                            style={{...styles.actionButton, ...styles.viewButton}}
-                            onMouseEnter={(e) => e.target.style.backgroundColor = '#2563EB'}
-                            onMouseLeave={(e) => e.target.style.backgroundColor = '#3B82F6'}
-                            onClick={() => {/* View customer details */}}
+                          <button 
+                            style={{ ...styles.actionButton, ...styles.actionView }}
+                            onClick={() => {
+                              setSelectedCustomer(customer);
+                              setShowCustomerModal(true);
+                            }}
                             title="View Customer"
+                            onMouseEnter={handleActionHover}
+                            onMouseLeave={handleActionLeave}
                           >
                             <FaEye /> View
                           </button>
-                          <button
-                            style={{...styles.actionButton, ...styles.editButton}}
-                            onMouseEnter={(e) => e.target.style.backgroundColor = '#D97706'}
-                            onMouseLeave={(e) => e.target.style.backgroundColor = '#F59E0B'}
-                            onClick={() => {/* Edit customer */}}
-                            title="Edit Customer"
+                          <button 
+                            style={{ ...styles.actionButton, ...styles.actionStatus }}
+                            onClick={() => toggleCustomerStatus(customer.id, customer.status)}
+                            title={customer.status === 'active' ? 'Deactivate' : 'Activate'}
+                            onMouseEnter={handleActionHover}
+                            onMouseLeave={handleActionLeave}
                           >
-                            <FaEdit /> Edit
+                            {customer.status === 'active' ? <FaUserTimes /> : <FaUserCheck />}
+                          </button>
+                          <button 
+                            style={{ ...styles.actionButton, ...styles.actionDelete }}
+                            onClick={() => {
+                              setSelectedCustomer(customer);
+                              setShowDeleteModal(true);
+                            }}
+                            title="Delete Customer"
+                            onMouseEnter={handleActionHover}
+                            onMouseLeave={handleActionLeave}
+                          >
+                            <FaTrash />
                           </button>
                         </div>
                       </td>
@@ -772,29 +1012,126 @@ const AdminCustomers = () => {
                 })}
               </tbody>
             </table>
+          </div>
+          
+          {filteredCustomers.length === 0 && (
+            <div style={styles.emptyState}>
+              <div style={styles.emptyIcon}><FaUserFriends /></div>
+              <h3 style={styles.emptyTitle}>No customers found</h3>
+              <p style={styles.emptyText}>
+                {searchTerm ? 'Try adjusting your search' : 'No customers registered yet'}
+              </p>
+            </div>
           )}
         </div>
       </div>
 
+      {/* Customer Detail Modal */}
+      {showCustomerModal && selectedCustomer && (
+        <div style={styles.modalOverlay} onClick={() => setShowCustomerModal(false)}>
+          <div style={styles.modal} onClick={(e) => e.stopPropagation()}>
+            <h2 style={styles.modalTitle}>Customer Details</h2>
+            <div style={styles.modalBody}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1rem' }}>
+                <div style={{ ...styles.customerAvatar, width: '60px', height: '60px', fontSize: '1.5rem' }}>
+                  {getInitials(selectedCustomer)}
+                </div>
+                <div>
+                  <div style={{ fontSize: '1.1rem', fontWeight: '600' }}>
+                    {selectedCustomer.first_name || ''} {selectedCustomer.last_name || ''}
+                  </div>
+                  <div style={{ color: '#666666' }}>@{selectedCustomer.username}</div>
+                </div>
+              </div>
+              <div style={{ display: 'grid', gap: '0.5rem' }}>
+                <div><strong>Email:</strong> {selectedCustomer.email}</div>
+                <div><strong>Phone:</strong> {selectedCustomer.phone || 'N/A'}</div>
+                <div><strong>Status:</strong> {selectedCustomer.status || 'Active'}</div>
+                <div><strong>Joined:</strong> {formatDate(selectedCustomer.created_at)}</div>
+                <div><strong>Total Orders:</strong> {selectedCustomer.order_count || 0}</div>
+                <div><strong>Address:</strong> {selectedCustomer.address || 'N/A'}</div>
+                <div><strong>City:</strong> {selectedCustomer.city || 'N/A'}</div>
+              </div>
+            </div>
+            <div style={styles.modalFooter}>
+              <button 
+                style={{ ...styles.modalButton, ...styles.modalButtonPrimary }}
+                onClick={() => {
+                  setShowCustomerModal(false);
+                  handleCall(selectedCustomer);
+                }}
+              >
+                <FaPhoneAlt /> Call Customer
+              </button>
+              <button 
+                style={{ ...styles.modalButton, ...styles.modalButtonSecondary }}
+                onClick={() => setShowCustomerModal(false)}
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteModal && selectedCustomer && (
+        <div style={styles.modalOverlay} onClick={() => setShowDeleteModal(false)}>
+          <div style={styles.modal} onClick={(e) => e.stopPropagation()}>
+            <h2 style={styles.modalTitle}>Delete Customer</h2>
+            <div style={styles.modalBody}>
+              <p>Are you sure you want to delete customer <strong>{selectedCustomer.username}</strong>?</p>
+              <p style={{ color: '#666666', marginTop: '0.5rem' }}>This action cannot be undone.</p>
+            </div>
+            <div style={styles.modalFooter}>
+              <button 
+                style={{ ...styles.modalButton, ...styles.modalButtonSecondary }}
+                onClick={() => setShowDeleteModal(false)}
+              >
+                Cancel
+              </button>
+              <button 
+                style={{ ...styles.modalButton, ...styles.modalButtonDanger }}
+                onClick={() => deleteCustomer(selectedCustomer.id)}
+              >
+                Delete Customer
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Call Modal */}
       {showCallModal && selectedCustomer && (
-        <div style={styles.modalOverlay}>
-          <div style={styles.modal}>
+        <div style={styles.modalOverlay} onClick={() => {
+          if (callStatus === 'calling' || callStatus === 'active') {
+            if (window.confirm('Are you sure you want to end this call?')) {
+              handleEndCall();
+            }
+          } else {
+            setShowCallModal(false);
+            setSelectedCustomer(null);
+          }
+        }}>
+          <div style={{...styles.modal, ...styles.callModal}} onClick={(e) => e.stopPropagation()}>
             <div style={styles.modalHeader}>
               <h2 style={styles.modalTitle}>
                 <FaPhoneAlt style={{ marginRight: '0.5rem', color: '#DB4444' }} />
                 Calling Customer
               </h2>
-              <button style={styles.modalClose} onClick={() => {
-                if (callStatus === 'calling' || callStatus === 'active') {
-                  if (window.confirm('Are you sure you want to end this call?')) {
-                    handleEndCall();
+              <button 
+                style={{ background: 'none', border: 'none', fontSize: '1.5rem', cursor: 'pointer', color: '#999999' }}
+                onClick={() => {
+                  if (callStatus === 'calling' || callStatus === 'active') {
+                    if (window.confirm('Are you sure you want to end this call?')) {
+                      handleEndCall();
+                    }
+                  } else {
+                    setShowCallModal(false);
+                    setSelectedCustomer(null);
                   }
-                } else {
-                  setShowCallModal(false);
-                  setSelectedCustomer(null);
-                }
-              }}>
+                }}
+              >
                 <FaTimesCircle />
               </button>
             </div>
@@ -902,9 +1239,7 @@ const AdminCustomers = () => {
           </div>
         </div>
       )}
-
-      <Footer />
-    </div>
+    </AdminLayout>
   );
 };
 
