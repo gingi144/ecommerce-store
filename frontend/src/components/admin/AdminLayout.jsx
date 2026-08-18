@@ -1,16 +1,23 @@
+// src/components/admin/AdminLayout.jsx
 import React, { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { 
   FaHome, FaBox, FaShoppingCart, FaUsers, 
   FaSignOutAlt, FaStore, FaTags, FaCog,
-  FaChartBar, FaBars, FaTimes, FaChevronDown,
-  FaChevronRight, FaTachometerAlt, FaGift,
-  FaUserFriends, FaPhoneAlt
+  FaTachometerAlt, FaGift,
+  FaUserFriends, FaChartBar, FaFileAlt,
+  FaStar, FaTruck, FaCreditCard, FaMoneyBillWave,
+  FaEnvelope, FaBell, FaPercent, FaClipboardList,
+  FaCube, FaFileInvoice, FaChartLine, FaBookOpen,
+  FaBars, FaTimes, FaChevronRight
 } from 'react-icons/fa';
 
 const AdminLayout = ({ children }) => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
-  const [expandedMenus, setExpandedMenus] = useState(['products', 'orders', 'users']);
+  const [expandedMenus, setExpandedMenus] = useState([
+    'products', 'orders', 'users', 'customers', 
+    'analytics', 'content', 'discounts', 'settings'
+  ]);
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -96,7 +103,7 @@ const AdminLayout = ({ children }) => {
     navItem: {
       display: 'flex',
       alignItems: 'center',
-      padding: '0.75rem 1rem',
+      padding: '0.6rem 1rem',
       color: '#CCCCCC',
       textDecoration: 'none',
       transition: 'all 0.2s ease',
@@ -104,17 +111,15 @@ const AdminLayout = ({ children }) => {
       position: 'relative',
       gap: '0.75rem',
       whiteSpace: 'nowrap',
+      fontSize: '0.875rem',
     },
     navItemActive: {
       backgroundColor: 'rgba(219, 68, 68, 0.15)',
       color: '#DB4444',
       borderRight: '3px solid #DB4444',
     },
-    navItemHover: {
-      backgroundColor: 'rgba(255, 255, 255, 0.05)',
-    },
     navIcon: {
-      fontSize: '1.2rem',
+      fontSize: '1.1rem',
       minWidth: '24px',
       display: 'flex',
       alignItems: 'center',
@@ -122,26 +127,26 @@ const AdminLayout = ({ children }) => {
     },
     navText: {
       flex: 1,
-      fontSize: '0.9rem',
+      fontSize: '0.875rem',
       overflow: 'hidden',
     },
     navArrow: {
-      fontSize: '0.7rem',
+      fontSize: '0.65rem',
       transition: 'transform 0.3s ease',
     },
     navArrowOpen: {
       transform: 'rotate(90deg)',
     },
     subNav: {
-      paddingLeft: '1.5rem',
+      paddingLeft: '0.5rem',
     },
     subNavItem: {
       display: 'flex',
       alignItems: 'center',
-      padding: '0.5rem 1rem 0.5rem 2.5rem',
+      padding: '0.4rem 1rem 0.4rem 2.5rem',
       color: '#AAAAAA',
       textDecoration: 'none',
-      fontSize: '0.85rem',
+      fontSize: '0.8rem',
       transition: 'all 0.2s ease',
       cursor: 'pointer',
       gap: '0.5rem',
@@ -158,7 +163,7 @@ const AdminLayout = ({ children }) => {
       display: 'flex',
       alignItems: 'center',
       gap: '0.75rem',
-      padding: '0.75rem 1rem',
+      padding: '0.6rem 1rem',
       color: '#CCCCCC',
       textDecoration: 'none',
       cursor: 'pointer',
@@ -167,7 +172,7 @@ const AdminLayout = ({ children }) => {
       width: '100%',
       background: 'none',
       border: 'none',
-      fontSize: '0.9rem',
+      fontSize: '0.875rem',
     },
     content: {
       flex: 1,
@@ -239,6 +244,17 @@ const AdminLayout = ({ children }) => {
       subItems: [
         { path: '/admin/products', label: 'All Products' },
         { path: '/admin/products/new', label: 'Add Product' },
+        { path: '/admin/categories', label: 'Categories' },
+      ],
+    },
+    {
+      path: '/admin/inventory',
+      icon: <FaCube />,
+      label: 'Inventory',
+      menu: 'inventory',
+      subItems: [
+        { path: '/admin/inventory', label: 'Stock Overview' },
+        { path: '/admin/inventory/low-stock', label: 'Low Stock Items' },
       ],
     },
     {
@@ -248,15 +264,10 @@ const AdminLayout = ({ children }) => {
       menu: 'orders',
       subItems: [
         { path: '/admin/orders', label: 'All Orders' },
-      ],
-    },
-    {
-      path: '/admin/users',
-      icon: <FaUsers />,
-      label: 'Users',
-      menu: 'users',
-      subItems: [
-        { path: '/admin/users', label: 'All Users' },
+        { path: '/admin/orders?status=pending', label: 'Pending Orders' },
+        { path: '/admin/orders?status=processing', label: 'Processing' },
+        { path: '/admin/orders?status=shipped', label: 'Shipped' },
+        { path: '/admin/orders?status=delivered', label: 'Delivered' },
       ],
     },
     {
@@ -266,24 +277,107 @@ const AdminLayout = ({ children }) => {
       menu: 'customers',
       subItems: [
         { path: '/admin/customers', label: 'All Customers' },
+        { path: '/admin/customers?status=active', label: 'Active Customers' },
+        { path: '/admin/customers?status=inactive', label: 'Inactive' },
       ],
     },
     {
-      path: '/admin/flash-sale',
-      icon: <FaGift />,
-      label: 'Flash Sales',
-      menu: 'flash-sale',
+      path: '/admin/users',
+      icon: <FaUsers />,
+      label: 'Users',
+      menu: 'users',
       subItems: [
-        { path: '/admin/flash-sale', label: 'Settings' },
+        { path: '/admin/users', label: 'All Users' },
+        { path: '/admin/users?role=admin', label: 'Admins' },
       ],
     },
     {
-      path: '/admin/categories',
-      icon: <FaTags />,
-      label: 'Categories',
-      menu: 'categories',
+      path: '/admin/discounts',
+      icon: <FaPercent />,
+      label: 'Discounts',
+      menu: 'discounts',
       subItems: [
-        { path: '/admin/categories', label: 'All Categories' },
+        { path: '/admin/discounts', label: 'All Discounts' },
+        { path: '/admin/discounts/new', label: 'Create Discount' },
+        { path: '/admin/flash-sale', label: 'Flash Sales' },
+      ],
+    },
+    {
+      path: '/admin/reviews',
+      icon: <FaStar />,
+      label: 'Reviews',
+      menu: 'reviews',
+      subItems: [
+        { path: '/admin/reviews', label: 'All Reviews' },
+        { path: '/admin/reviews/pending', label: 'Pending Approval' },
+      ],
+    },
+    {
+      path: '/admin/analytics',
+      icon: <FaChartLine />,
+      label: 'Analytics',
+      menu: 'analytics',
+      subItems: [
+        { path: '/admin/analytics', label: 'Dashboard' },
+        { path: '/admin/analytics/sales', label: 'Sales Reports' },
+        { path: '/admin/analytics/products', label: 'Product Performance' },
+        { path: '/admin/analytics/customers', label: 'Customer Analytics' },
+        { path: '/admin/analytics/revenue', label: 'Revenue Reports' },
+      ],
+    },
+    {
+      path: '/admin/content',
+      icon: <FaFileAlt />,
+      label: 'Content',
+      menu: 'content',
+      subItems: [
+        { path: '/admin/content/pages', label: 'Pages' },
+        { path: '/admin/content/blog', label: 'Blog Posts' },
+        { path: '/admin/content/banners', label: 'Banners' },
+        { path: '/admin/content/testimonials', label: 'Testimonials' },
+      ],
+    },
+    {
+      path: '/admin/shipping',
+      icon: <FaTruck />,
+      label: 'Shipping',
+      menu: 'shipping',
+      subItems: [
+        { path: '/admin/shipping', label: 'Settings' },
+        { path: '/admin/shipping/zones', label: 'Shipping Zones' },
+        { path: '/admin/shipping/methods', label: 'Methods' },
+      ],
+    },
+    {
+      path: '/admin/payments',
+      icon: <FaCreditCard />,
+      label: 'Payments',
+      menu: 'payments',
+      subItems: [
+        { path: '/admin/payments', label: 'Settings' },
+        { path: '/admin/payments/methods', label: 'Payment Methods' },
+        { path: '/admin/payments/transactions', label: 'Transactions' },
+      ],
+    },
+    {
+      path: '/admin/taxes',
+      icon: <FaMoneyBillWave />,
+      label: 'Taxes',
+      menu: 'taxes',
+      subItems: [
+        { path: '/admin/taxes', label: 'Tax Settings' },
+        { path: '/admin/taxes/rates', label: 'Tax Rates' },
+      ],
+    },
+    {
+      path: '/admin/emails',
+      icon: <FaEnvelope />,
+      label: 'Emails',
+      menu: 'emails',
+      subItems: [
+        { path: '/admin/emails', label: 'Settings' },
+        { path: '/admin/emails/templates', label: 'Templates' },
+        { path: '/admin/newsletter', label: 'Newsletter' },
       ],
     },
     {
@@ -293,7 +387,10 @@ const AdminLayout = ({ children }) => {
       menu: 'settings',
       subItems: [
         { path: '/admin/settings', label: 'General' },
+        { path: '/admin/settings/store', label: 'Store Info' },
         { path: '/admin/settings/payment', label: 'Payment' },
+        { path: '/admin/settings/shipping', label: 'Shipping' },
+        { path: '/admin/settings/security', label: 'Security' },
       ],
     },
   ];
@@ -468,7 +565,6 @@ const AdminLayout = ({ children }) => {
               padding: 0.75rem !important;
             }
           }
-          /* Scrollbar styling */
           .admin-sidebar::-webkit-scrollbar {
             width: 4px;
           }
