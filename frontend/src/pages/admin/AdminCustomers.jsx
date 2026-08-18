@@ -1,6 +1,6 @@
 // src/pages/admin/AdminCustomers.jsx
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { 
   FaUsers, FaEdit, FaTrash, FaEye, 
   FaUserCheck, FaUserTimes, FaSearch,
@@ -17,6 +17,7 @@ import api from '../../api';
 
 const AdminCustomers = () => {
   const { isAdmin, loading: authLoading } = useAuth();
+  const navigate = useNavigate();
   const [customers, setCustomers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -52,11 +53,15 @@ const AdminCustomers = () => {
   const fetchCustomers = async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await api.get('/api/admin/customers', {
+      // Use the same endpoint as AdminUsers - /api/admin/users
+      const response = await api.get('/api/admin/users', {
         headers: { Authorization: 'Bearer ' + token }
       });
       
-      const customerData = response.data || [];
+      // Filter to only get customers (non-admin users)
+      const allUsers = response.data || [];
+      const customerData = allUsers.filter(user => !user.is_admin);
+      
       setCustomers(customerData);
       
       // Calculate stats
@@ -148,7 +153,7 @@ const AdminCustomers = () => {
     try {
       const token = localStorage.getItem('token');
       const newStatus = currentStatus === 'active' ? 'inactive' : 'active';
-      await api.put(`/api/admin/customers/${customerId}/status`, 
+      await api.put(`/api/admin/users/${customerId}/status`, 
         { status: newStatus },
         { headers: { Authorization: 'Bearer ' + token } }
       );
@@ -164,7 +169,7 @@ const AdminCustomers = () => {
     
     try {
       const token = localStorage.getItem('token');
-      await api.delete(`/api/admin/customers/${customerId}`, {
+      await api.delete(`/api/admin/users/${customerId}`, {
         headers: { Authorization: 'Bearer ' + token }
       });
       setShowDeleteModal(false);
