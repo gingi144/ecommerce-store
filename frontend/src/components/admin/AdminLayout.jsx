@@ -4,12 +4,13 @@ import {
   FaHome, FaBox, FaShoppingCart, FaUsers, 
   FaSignOutAlt, FaStore, FaTags, FaCog,
   FaChartBar, FaBars, FaTimes, FaChevronDown,
-  FaChevronRight, FaTachometerAlt, FaGift
+  FaChevronRight, FaTachometerAlt, FaGift,
+  FaUserFriends, FaPhoneAlt
 } from 'react-icons/fa';
 
 const AdminLayout = ({ children }) => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
-  const [expandedMenus, setExpandedMenus] = useState(['products', 'orders']);
+  const [expandedMenus, setExpandedMenus] = useState(['products', 'orders', 'users']);
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -211,7 +212,6 @@ const AdminLayout = ({ children }) => {
       fontSize: '0.8rem',
       fontWeight: '600',
     },
-    // Mobile overlay
     mobileOverlay: {
       display: 'none',
       position: 'fixed',
@@ -260,6 +260,15 @@ const AdminLayout = ({ children }) => {
       ],
     },
     {
+      path: '/admin/customers',
+      icon: <FaUserFriends />,
+      label: 'Customers',
+      menu: 'customers',
+      subItems: [
+        { path: '/admin/customers', label: 'All Customers' },
+      ],
+    },
+    {
       path: '/admin/flash-sale',
       icon: <FaGift />,
       label: 'Flash Sales',
@@ -292,7 +301,7 @@ const AdminLayout = ({ children }) => {
   return (
     <div style={styles.adminContainer}>
       {/* Sidebar */}
-      <div style={styles.sidebar}>
+      <div style={styles.sidebar} className="admin-sidebar">
         <div style={styles.sidebarHeader}>
           <Link to="/admin" style={styles.logo}>
             <span style={styles.logoIcon}><FaStore /></span>
@@ -416,12 +425,14 @@ const AdminLayout = ({ children }) => {
       </div>
 
       {/* Mobile Overlay */}
-      {!isSidebarOpen && (
-        <div style={styles.mobileOverlay} onClick={() => setIsSidebarOpen(true)}></div>
-      )}
+      <div 
+        className="admin-overlay"
+        style={styles.mobileOverlay} 
+        onClick={() => setIsSidebarOpen(true)}
+      ></div>
 
       {/* Main Content */}
-      <div style={styles.content}>
+      <div style={styles.content} className="admin-content">
         <div style={styles.topBar}>
           <h1 style={styles.topBarTitle}>
             {navItems.find(item => isActive(item.path))?.label || 'Dashboard'}
@@ -442,14 +453,34 @@ const AdminLayout = ({ children }) => {
           @media (max-width: 768px) {
             .admin-sidebar {
               width: ${isSidebarOpen ? '260px' : '0px'} !important;
-              transform: ${isSidebarOpen ? 'translateX(0)' : 'translateX(-100%)'};
+              transform: ${isSidebarOpen ? 'translateX(0)' : 'translateX(-100%)'} !important;
             }
             .admin-content {
               margin-left: 0 !important;
+              padding: 1rem !important;
             }
             .admin-overlay {
               display: ${isSidebarOpen ? 'block' : 'none'} !important;
             }
+          }
+          @media (max-width: 480px) {
+            .admin-content {
+              padding: 0.75rem !important;
+            }
+          }
+          /* Scrollbar styling */
+          .admin-sidebar::-webkit-scrollbar {
+            width: 4px;
+          }
+          .admin-sidebar::-webkit-scrollbar-track {
+            background: #1A1A1A;
+          }
+          .admin-sidebar::-webkit-scrollbar-thumb {
+            background: #444444;
+            border-radius: 2px;
+          }
+          .admin-sidebar::-webkit-scrollbar-thumb:hover {
+            background: #666666;
           }
         `}
       </style>
